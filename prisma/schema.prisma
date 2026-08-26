@@ -1,0 +1,356 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  WAREHOUSE_OFFICER
+  MANAGER
+  STAFF
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum MovementType {
+  STOCK_RECEIVED
+  STOCK_ISSUED
+  STOCK_RETURNED
+  STOCK_ADJUSTED
+}
+
+enum TransactionStatus {
+  COMPLETED
+  REVERSED
+}
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  SYSTEM
+}
+
+model User {
+  id                  String          @id @default(cuid())
+  name                String
+  email               String          @unique
+  passwordHash        String
+  role                Role
+  status              RecordStatus    @default(ACTIVE)
+  employeeId          String?         @unique
+  employee            Employee?       @relation(fields: [employeeId], references: [id])
+  failedLoginAttempts Int             @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  issues              StockIssue[]    @relation("IssueOfficer")
+  receipts            StockReceipt[]  @relation("ReceiptOfficer")
+  returns             StockReturn[]   @relation("ReturnOfficer")
+  movements           StockMovement[] @relation("MovementOfficer")
+  auditLogs           AuditLog[]
+}
+
+model Client {
+  id            String               @id @default(cuid())
+  clientCode    String               @unique
+  companyName   String
+  contactPerson String?
+  contactPhone  String?
+  contactEmail  String?
+  address       String?
+  status        RecordStatus         @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  locations     Location[]
+  assignments   EmployeeAssignment[]
+  issues        StockIssue[]
+  returns       StockReturn[]
+  movements     StockMovement[]
+}
+
+model Location {
+  id            String               @id @default(cuid())
+  locationCode  String               @unique
+  name          String
+  clientId      String
+  client        Client               @relation(fields: [clientId], references: [id])
+  address       String?
+  contactPerson String?
+  contactPhone  String?
+  status        RecordStatus         @default(ACTIVE)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  assignments   EmployeeAssignment[]
+  issues        StockIssue[]
+  returns       StockReturn[]
+  movements     StockMovement[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+}
+
+model Employee {
+  id               String               @id @default(cuid())
+  employeeCode     String               @unique
+  fullName         String
+  phone            String
+  email            String?
+  jobTitle         String
+  qrToken          String               @unique
+  employmentStatus EmploymentStatus     @default(ACTIVE)
+  dateJoined       DateTime
+  profilePhotoUrl  String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  account          User?
+  assignments      EmployeeAssignment[]
+  issues           StockIssue[]
+  returns          StockReturn[]
+  movements        StockMovement[]
+}
+
+model EmployeeAssignment {
+  id         String    @id @default(cuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id])
+  locationId String
+  location   Location  @relation(fields: [locationId], references: [id])
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime?
+  isPrimary  Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  @@index([employeeId, endsAt])
+  @@index([clientId])
+  @@index([locationId])
+}
+
+model InventoryCategory {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String?
+  status      RecordStatus    @default(ACTIVE)
+  items       InventoryItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model InventoryItem {
+  id                String             @id @default(cuid())
+  sku               String             @unique
+  name              String
+  categoryId        String
+  category          InventoryCategory  @relation(fields: [categoryId], references: [id])
+  unit              String
+  currentQuantity   Decimal            @default(0) @db.Decimal(14, 3)
+  minimumStockLevel Decimal            @default(0) @db.Decimal(14, 3)
+  maximumStockLevel Decimal?           @db.Decimal(14, 3)
+  unitCost          Decimal?           @db.Decimal(14, 2)
+  description       String?
+  status            RecordStatus       @default(ACTIVE)
+  version           Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  issueItems        StockIssueItem[]
+  receiptItems      StockReceiptItem[]
+  returnItems       StockReturnItem[]
+  movements         StockMovement[]
+  notifications     Notification[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model StockIssue {
+  id              String            @id @default(cuid())
+  transactionCode String            @unique
+  employeeId      String
+  employee        Employee          @relation(fields: [employeeId], references: [id])
+  clientId        String
+  client          Client            @relation(fields: [clientId], references: [id])
+  locationId      String
+  location        Location          @relation(fields: [locationId], references: [id])
+  employeeName    String
+  clientName      String
+  locationName    String
+  officerId       String
+  officer         User              @relation("IssueOfficer", fields: [officerId], references: [id])
+  status          TransactionStatus @default(COMPLETED)
+  notes           String?
+  issuedAt        DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  items           StockIssueItem[]
+  returns         StockReturn[]
+  movements       StockMovement[]
+
+  @@index([employeeId, issuedAt])
+  @@index([clientId, issuedAt])
+  @@index([locationId, issuedAt])
+}
+
+model StockIssueItem {
+  id       String            @id @default(cuid())
+  issueId  String
+  issue    StockIssue        @relation(fields: [issueId], references: [id])
+  itemId   String
+  item     InventoryItem     @relation(fields: [itemId], references: [id])
+  itemName String
+  unit     String
+  quantity Decimal           @db.Decimal(14, 3)
+  returns  StockReturnItem[]
+
+  @@unique([issueId, itemId])
+  @@index([itemId])
+}
+
+model StockReceipt {
+  id              String             @id @default(cuid())
+  transactionCode String             @unique
+  supplier        String
+  reference       String?
+  receivedAt      DateTime           @default(now())
+  notes           String?
+  officerId       String
+  officer         User               @relation("ReceiptOfficer", fields: [officerId], references: [id])
+  status          TransactionStatus  @default(COMPLETED)
+  createdAt       DateTime           @default(now())
+  items           StockReceiptItem[]
+  movements       StockMovement[]
+
+  @@index([receivedAt])
+}
+
+model StockReceiptItem {
+  id        String        @id @default(cuid())
+  receiptId String
+  receipt   StockReceipt  @relation(fields: [receiptId], references: [id])
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  itemName  String
+  unit      String
+  quantity  Decimal       @db.Decimal(14, 3)
+  unitCost  Decimal?      @db.Decimal(14, 2)
+
+  @@unique([receiptId, itemId])
+  @@index([itemId])
+}
+
+model StockReturn {
+  id              String            @id @default(cuid())
+  transactionCode String            @unique
+  originalIssueId String?
+  originalIssue   StockIssue?       @relation(fields: [originalIssueId], references: [id])
+  employeeId      String
+  employee        Employee          @relation(fields: [employeeId], references: [id])
+  clientId        String
+  client          Client            @relation(fields: [clientId], references: [id])
+  locationId      String
+  location        Location          @relation(fields: [locationId], references: [id])
+  officerId       String
+  officer         User              @relation("ReturnOfficer", fields: [officerId], references: [id])
+  notes           String?
+  returnedAt      DateTime          @default(now())
+  status          TransactionStatus @default(COMPLETED)
+  createdAt       DateTime          @default(now())
+  items           StockReturnItem[]
+  movements       StockMovement[]
+
+  @@index([employeeId, returnedAt])
+  @@index([originalIssueId])
+}
+
+model StockReturnItem {
+  id          String          @id @default(cuid())
+  returnId    String
+  stockReturn StockReturn     @relation(fields: [returnId], references: [id])
+  issueItemId String?
+  issueItem   StockIssueItem? @relation(fields: [issueItemId], references: [id])
+  itemId      String
+  item        InventoryItem   @relation(fields: [itemId], references: [id])
+  itemName    String
+  unit        String
+  quantity    Decimal         @db.Decimal(14, 3)
+
+  @@unique([returnId, itemId])
+  @@index([itemId])
+}
+
+model StockMovement {
+  id               String        @id @default(cuid())
+  transactionCode  String
+  movementType     MovementType
+  itemId           String
+  item             InventoryItem @relation(fields: [itemId], references: [id])
+  quantity         Decimal       @db.Decimal(14, 3)
+  previousQuantity Decimal       @db.Decimal(14, 3)
+  newQuantity      Decimal       @db.Decimal(14, 3)
+  employeeId       String?
+  employee         Employee?     @relation(fields: [employeeId], references: [id])
+  clientId         String?
+  client           Client?       @relation(fields: [clientId], references: [id])
+  locationId       String?
+  location         Location?     @relation(fields: [locationId], references: [id])
+  officerId        String
+  officer          User          @relation("MovementOfficer", fields: [officerId], references: [id])
+  issueId          String?
+  issue            StockIssue?   @relation(fields: [issueId], references: [id])
+  receiptId        String?
+  receipt          StockReceipt? @relation(fields: [receiptId], references: [id])
+  returnId         String?
+  stockReturn      StockReturn?  @relation(fields: [returnId], references: [id])
+  reference        String?
+  notes            String?
+  createdAt        DateTime      @default(now())
+
+  @@index([itemId, createdAt])
+  @@index([movementType, createdAt])
+  @@index([transactionCode])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  action        String
+  entityType    String
+  entityId      String?
+  previousValue Json?
+  newValue      Json?
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  type       NotificationType
+  title      String
+  message    String
+  itemId     String?
+  item       InventoryItem?   @relation(fields: [itemId], references: [id])
+  isRead     Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  resolvedAt DateTime?
+
+  @@index([isRead, createdAt])
+}

@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  #employee-print-card, #employee-print-card * { visibility: visible !important; }
+  #employee-print-card { position: fixed; inset: 0; width: 90mm; height: fit-content; margin: 15mm auto; border: 2px solid #b7ead0 !important; box-shadow: none !important; }
+  @page { size: A4; margin: 0; }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, input { font: inherit; }
+button { cursor: pointer; }
+button, a, input, select { transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+button:active { transform: scale(.985); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(24, 185, 104, .22); outline-offset: 2px; }
+.bg-\[\#4758e8\], .bg-\[\#f45b24\] { background-color: #18b968 !important; }
+.text-\[\#f45b24\], .text-indigo-600 { color: #18b968 !important; }
+.bg-indigo-50, .bg-orange-50 { background-color: #eafff3 !important; }
+.text-orange-600 { color: #18b968 !important; }
+.hover\:border-indigo-300:hover { border-color: #72dca7 !important; }
+
+.warehouse-pattern,
+main.grid.min-h-dvh > section:first-child.bg-\[\#18b968\] {
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+.warehouse-pattern::before,
+main.grid.min-h-dvh > section:first-child.bg-\[\#18b968\]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.16' stroke-width='1.5'%3E%3Cpath d='M24 31l20-11 20 11v23L44 65 24 54zM24 31l20 12 20-12M44 43v22'/%3E%3Cpath d='M116 104h30v30h-30zM121 98h20M131 88v10'/%3E%3Cpath d='M15 130c30 0 25 32 55 32s24-42 55-42' stroke-dasharray='4 7'/%3E%3Ccircle cx='91' cy='42' r='4'/%3E%3Ccircle cx='156' cy='48' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+main.grid.min-h-dvh > section:first-child.bg-\[\#18b968\]::before {
+  background-size: 220px 220px;
+  opacity: .9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

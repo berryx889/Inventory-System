@@ -1,0 +1,7 @@
+import {z} from "zod";
+import {prisma} from "@/lib/prisma";
+import {apiError,AppError} from "@/lib/http";
+import {requirePermission} from "@/lib/rbac";
+import {requireSession} from "@/lib/session";
+const schema=z.object({name:z.string().trim().min(2).max(120).optional(),role:z.enum(["ADMIN","WAREHOUSE_OFFICER","MANAGER","STAFF"]).optional(),status:z.enum(["ACTIVE","INACTIVE"]).optional()});
+export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){try{const actor=await requireSession();requirePermission(actor.role,"users:manage");const{id}=await params;const input=schema.parse(await request.json());if(id===actor.id&&input.status==="INACTIVE")throw new AppError(422,"SELF_DEACTIVATION","You cannot deactivate your own account.");const before=await prisma.user.findUnique({where:{id}});if(!before)throw new AppError(404,"USER_NOT_FOUND","User was not found.");const user=await prisma.$transaction(async tx=>{const changed=await tx.user.update({where:{id},data:input});await tx.auditLog.create({data:{userId:actor.id,action:"USER_UPDATED",entityType:"User",entityId:id,previousValue:{name:before.name,role:before.role,status:before.status},newValue:{name:changed.name,role:changed.role,status:changed.status}}});return changed});return Response.json({user:{id:user.id,name:user.name,email:user.email,role:user.role,status:user.status}})}catch(error){return apiError(error)}}
