@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Vercel supplies its own Next.js adapter. Next 16.3 currently fails when
+  // that adapter and standalone output are enabled together.
+  output: process.env.VERCEL ? undefined : "standalone",
   poweredByHeader: false,
   turbopack: { root: process.cwd() },
   async headers() {
