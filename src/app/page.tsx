@@ -824,12 +824,12 @@ function Dashboard({
     low = items.filter((i) => i.inventoryStatus !== "IN_STOCK").length;
   return (
     <>
-      <section className="premium-hero overflow-hidden rounded-[28px] bg-white p-7 sm:p-9">
-        <p className="text-xs font-bold uppercase tracking-[.16em] text-[#11864d]">Good morning</p>
-        <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-[#1d1d1f] sm:text-5xl">
+      <section className="premium-hero inventory-hero overflow-hidden rounded-[28px] bg-[#18b968] p-7 text-white sm:p-9">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-white/80">Good morning</p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-white sm:text-5xl">
           Everything your teams need, ready when they arrive.
         </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6e6e73] sm:text-base">Live inventory, staff collections, and warehouse activity in one clear view.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">Live inventory, staff collections, and warehouse activity in one clear view.</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ["Issue stock", ScanLine, () => action("issue")],
@@ -842,7 +842,7 @@ function Dashboard({
               <button
                 key={l as string}
                 onClick={fn as () => void}
-                className="quick-action spring-card rounded-[18px] bg-[#f5f5f7] p-4 text-left text-[#1d1d1f]"
+                className="quick-action spring-card rounded-[18px] bg-white p-4 text-left text-[#1d1d1f] shadow-[0_8px_24px_rgba(0,0,0,.08)]"
               >
                 <Icon className="text-[#18b968]" />
                 <b className="mt-3 block text-sm">{l as string}</b>
