@@ -38,7 +38,7 @@ console.log("Applying production database migrations...");
 const pooledUrl = process.env.DATABASE_URL;
 process.env.DATABASE_URL = process.env.DIRECT_URL;
 run("npx", ["prisma", "migrate", "deploy"]);
-process.env.DATABASE_URL = pooledUrl;
 console.log("Creating or rotating the production administrator...");
 run("npx", ["prisma", "db", "seed"]);
+process.env.DATABASE_URL = pooledUrl;
 console.log("Production database bootstrap complete.");

@@ -31,7 +31,7 @@ async function main() {
   await db.auditLog.create({ data: { userId: admin.id, action: "PRODUCTION_ADMIN_BOOTSTRAPPED", entityType: "System" } });
 
   if (process.env.SEED_DEMO_DATA !== "true") {
-    console.log(`Production administrator ready: ${adminEmail}`);
+    console.log("Production administrator is ready.");
     return;
   }
 
@@ -48,7 +48,7 @@ async function main() {
     { sku: "GLV-001", name: "Hand Gloves", unit: "Packs", currentQuantity: 0, minimumStockLevel: 15 },
   ];
   for (const item of items) await db.inventoryItem.upsert({ where: { sku: item.sku }, update: {}, create: { ...item, categoryId: category.id } });
-  console.log(`Administrator and demo warehouse data ready: ${adminEmail}`);
+  console.log("Administrator and demo warehouse data are ready.");
 }
 
 main().finally(() => db.$disconnect());
