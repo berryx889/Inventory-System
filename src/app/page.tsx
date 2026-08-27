@@ -14,7 +14,6 @@ import {
   History,
   KeyRound,
   LogOut,
-  Menu,
   Minus,
   PackageCheck,
   Plus,
@@ -136,7 +135,7 @@ const nav: [View, typeof Boxes][] = [
   ["Settings", Settings],
 ];
 const field =
-  "mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#18b968] focus:ring-2 focus:ring-emerald-100";
+  "mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-emerald-100";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
@@ -208,8 +207,7 @@ function Modal({
 export default function App() {
   const [auth, setAuth] = useState<"loading" | "out" | "in">("loading"),
     [user, setUser] = useState<User | null>(null),
-    [view, setView] = useState<View>("Dashboard"),
-    [menu, setMenu] = useState(false),
+    [view, setView] = useState<View>("Inventory"),
     [toast, setToast] = useState("");
   const [items, setItems] = useState<Item[]>([]),
     [employees, setEmployees] = useState<Employee[]>([]),
@@ -283,7 +281,7 @@ export default function App() {
   if (auth === "loading")
     return (
       <div className="grid min-h-dvh place-items-center bg-[#f7faf8]">
-        <div className="size-10 animate-spin rounded-full border-4 border-emerald-100 border-t-[#18b968]" />
+        <div className="size-10 animate-spin rounded-full border-4 border-emerald-100 border-t-[#1677ff]" />
       </div>
     );
   if (auth === "out")
@@ -298,97 +296,38 @@ export default function App() {
     );
   const activeItems = items.filter((i) => i.status === "ACTIVE"),
     activeEmployees = employees.filter((e) => e.status === "ACTIVE");
-  const sidebar = (
-    <aside className="flex h-full w-[min(86vw,18rem)] flex-col border-r border-black/[.06] bg-white text-[#1d1d1f] lg:w-64">
-      <div className="flex h-18 items-center gap-3 border-b border-black/[.06] px-5">
-        <div className="grid size-10 place-items-center rounded-[14px] bg-[#18b968] text-white">
-          <Boxes size={21} />
-        </div>
-        <div className="flex-1">
-          <b className="font-extrabold">StockFlow</b>
-          <div className="text-xs text-[#688579]">Live warehouse control</div>
-        </div>
-        <button className="lg:hidden" onClick={() => setMenu(false)}>
-          <X />
-        </button>
-      </div>
-      <nav className="flex-1 overflow-auto p-3">
-          {nav.filter(([label]) => label !== "Users" || user!.role === "ADMIN").map(([label, Icon]) => (
-          <button
-            key={label}
-            onClick={() => {
-              setView(label);
-              setMenu(false);
-            }}
-            className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${view === label ? "bg-[#f2f2f4] font-bold text-[#1d1d1f]" : "text-[#6e6e73] hover:bg-[#f7f7f8]"}`}
-          >
-            <span
-              className={`grid size-9 place-items-center rounded-[10px] ${view === label ? "bg-[#18a85f] text-white" : "bg-[#f2f2f4] text-[#6e6e73]"}`}
-            >
-              <Icon size={18} />
-            </span>
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="m-3 rounded-2xl bg-[#f5f5f7] p-4">
-        <b className="text-sm">{user!.name}</b>
-        <div className="text-xs text-slate-500">
-          {user!.role.replaceAll("_", " ")}
-        </div>
-        <button
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST" });
-            setAuth("out");
-          }}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,.06)]"
-        >
-          <LogOut size={15} />
-          Log out
-        </button>
-      </div>
-    </aside>
-  );
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] text-[#1d1d1f]">
-      <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
-        {sidebar}
-      </div>
-      {menu && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <button
-            className="absolute inset-0 bg-slate-950/50"
-            onClick={() => setMenu(false)}
-          />
-          <div className="relative">{sidebar}</div>
-        </div>
-      )}
-      <main className="pb-20 lg:ml-64 lg:pb-0">
-        <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-black/[.06] bg-white/80 px-4 backdrop-blur-xl sm:px-7">
-          <button
-            className="grid size-10 place-items-center rounded-xl border lg:hidden"
-            onClick={() => setMenu(true)}
-          >
-            <Menu />
+    <div className="min-h-dvh bg-[#f4f7fb] text-[#172033]">
+      <header className="sticky top-0 z-40 bg-[#0e1b33] text-white shadow-lg">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+          <button onClick={() => setView("Inventory")} className="flex shrink-0 items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-xl bg-[#1677ff] text-white"><Boxes size={21} /></span>
+            <span className="text-left"><b className="block text-lg leading-none">StockFlow</b><small className="text-white/55">Warehouse control</small></span>
           </button>
-          <div className="flex-1">
-            <h1 className="text-xl font-extrabold">{view}</h1>
-            <p className="hidden text-xs text-slate-500 sm:block">
-              Online · Database updated in real time
-            </p>
+          <nav className="order-3 flex w-full gap-1 overflow-x-auto pb-0.5 md:order-none md:ml-3 md:w-auto md:flex-1">
+            {nav.filter(([label]) => label !== "Users" || user!.role === "ADMIN").map(([label, Icon]) => (
+              <button
+                key={label}
+                onClick={() => setView(label)}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${view === label ? "bg-[#1677ff] text-white shadow-md" : "text-white/65 hover:bg-white/10 hover:text-white"}`}
+              >
+                <Icon size={16} />{label}
+              </button>
+            ))}
+          </nav>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="hidden text-right lg:block"><b className="block text-xs">{user!.name}</b><span className="text-[10px] text-white/50">{user!.role.replaceAll("_", " ")}</span></div>
+            <span className="grid size-9 place-items-center rounded-full bg-white/10 text-sm font-bold">{user!.name.slice(0, 1).toUpperCase()}</span>
+            <button
+              aria-label="Log out"
+              onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); setAuth("out"); }}
+              className="grid size-9 place-items-center rounded-xl bg-white/10 hover:bg-white/20"
+            ><LogOut size={17} /></button>
           </div>
-          <button className="grid size-10 place-items-center rounded-xl border">
-            <Search size={19} />
-          </button>
-          <button
-            onClick={() => setModal("issue")}
-            className="flex items-center gap-2 rounded-xl bg-[#18b968] px-4 py-2.5 text-sm font-bold text-white"
-          >
-            <ScanLine size={18} />
-            <span className="hidden sm:inline">Quick issue</span>
-          </button>
-        </header>
-        <div className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
+        </div>
+      </header>
+      <main className="pb-8">
+        <div className="mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
           {view === "Dashboard" && (
             <Dashboard
               items={items}
@@ -505,20 +444,6 @@ export default function App() {
           )}
         </div>
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid h-18 grid-cols-4 border-t bg-white lg:hidden">
-        {nav.slice(0, 4).map(([label, Icon]) => (
-          <button
-            key={label}
-            onClick={() => setView(label)}
-            className={`grid place-items-center text-[10px] font-bold ${view === label ? "text-[#18b968]" : "text-slate-500"}`}
-          >
-            <span>
-              <Icon className="mx-auto" size={20} />
-              {label.replace(" Stock", "")}
-            </span>
-          </button>
-        ))}
-      </nav>
       {modal === "new-item" && (
         <NewItem
           close={() => setModal(null)}
@@ -683,7 +608,7 @@ export default function App() {
         />
       )}
       {toast && (
-        <div className="fixed bottom-22 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-[#17352a] px-4 py-3 text-sm font-bold text-white shadow-xl lg:bottom-6">
+        <div className="fixed bottom-22 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-[#0e1b33] px-4 py-3 text-sm font-bold text-white shadow-xl lg:bottom-6">
           <Check size={17} className="text-emerald-400" />
           {toast}
         </div>
@@ -700,7 +625,7 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
     <main className="grid min-h-dvh bg-[#111113] lg:grid-cols-2">
       <section className="hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#18b968]">
+          <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#1677ff]">
             <Boxes />
           </span>
           <b className="text-xl">StockFlow</b>
@@ -742,7 +667,7 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
             }
           }}
         >
-          <div className="grid size-12 place-items-center rounded-2xl bg-[#18b968] text-white lg:hidden">
+          <div className="grid size-12 place-items-center rounded-2xl bg-[#1677ff] text-white lg:hidden">
             <Boxes />
           </div>
           <h2 className="mt-5 text-3xl font-black">Welcome back</h2>
@@ -776,14 +701,14 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
               onClick={() => setShowPassword((visible) => !visible)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
-              className="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#18b968]"
+              className="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#1677ff]"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
           <button
             disabled={busy}
-            className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white"
+            className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -813,7 +738,7 @@ function Head({
       {button && (
         <button
           onClick={click}
-          className="flex items-center gap-2 rounded-xl bg-[#18b968] px-4 py-2.5 text-sm font-bold text-white"
+          className="flex items-center gap-2 rounded-xl bg-[#1677ff] px-4 py-2.5 text-sm font-bold text-white"
         >
           <Plus size={17} />
           {button}
@@ -839,7 +764,7 @@ function Dashboard({
     low = items.filter((i) => i.inventoryStatus !== "IN_STOCK").length;
   return (
     <>
-      <section className="premium-hero inventory-hero overflow-hidden rounded-[28px] bg-[#18b968] p-7 text-white sm:p-9">
+      <section className="premium-hero inventory-hero overflow-hidden rounded-[28px] bg-[#1677ff] p-7 text-white sm:p-9">
         <p className="text-xs font-bold uppercase tracking-[.16em] text-white/80">Good morning</p>
         <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-white sm:text-5xl">
           Everything your teams need, ready when they arrive.
@@ -859,7 +784,7 @@ function Dashboard({
                 onClick={fn as () => void}
                 className="quick-action spring-card rounded-[18px] bg-white p-4 text-left text-[#1d1d1f] shadow-[0_8px_24px_rgba(0,0,0,.08)]"
               >
-                <Icon className="text-[#18b968]" />
+                <Icon className="text-[#1677ff]" />
                 <b className="mt-3 block text-sm">{l as string}</b>
               </button>
             );
@@ -930,7 +855,7 @@ function Inventory({
           </div>
           <button
             onClick={add}
-            className="hidden items-center gap-2 rounded-xl bg-[#18b968] px-4 py-2.5 text-sm font-bold text-white sm:flex"
+            className="hidden items-center gap-2 rounded-xl bg-[#1677ff] px-4 py-2.5 text-sm font-bold text-white sm:flex"
           >
             <Plus size={17} /> Add product
           </button>
@@ -959,15 +884,15 @@ function Inventory({
                   setSelectedId(item.id);
                   setQuantity(1);
                 }}
-                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#18b968]" : "ring-1 ring-black/[.05]"}`}
+                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#1677ff]" : "ring-1 ring-black/[.05]"}`}
               >
                 {active && (
-                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#18b968] text-white">
+                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#1677ff] text-white">
                     <Check size={15} />
                   </span>
                 )}
                 <div
-                  className="size-16 rounded-2xl bg-[#effaf3] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
+                  className="size-16 rounded-2xl bg-[#eef5ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
                   style={{
                     backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4],
                   }}
@@ -989,7 +914,7 @@ function Inventory({
       <aside className="border-t border-slate-200 bg-white p-5 sm:p-6 xl:border-l xl:border-t-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#18a85f]">Transaction</p>
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#1267c4]">Transaction</p>
             <h2 className="mt-1 text-2xl font-black">Stock Transfer</h2>
           </div>
           <ArrowLeftRight className="text-slate-400" />
@@ -1016,8 +941,8 @@ function Inventory({
         {selected ? (
           <>
             <p className="text-sm font-bold">Selected Product</p>
-            <div className="mt-2 flex items-center gap-3 rounded-2xl bg-[#f4f8f5] p-3">
-              <PackageCheck className="text-[#18b968]" />
+            <div className="mt-2 flex items-center gap-3 rounded-2xl bg-[#f1f6ff] p-3">
+              <PackageCheck className="text-[#1677ff]" />
               <div>
                 <b>{selected.name} · {selected.unit}</b>
                 <p className="text-xs text-slate-500">
@@ -1031,7 +956,7 @@ function Inventory({
                 <Minus size={18} />
               </button>
               <b className="text-center text-lg">{quantity}</b>
-              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#18b968] text-white">
+              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#1677ff] text-white">
                 <Plus size={18} />
               </button>
             </div>
@@ -1040,7 +965,7 @@ function Inventory({
               <p className="mt-1">{from} → {to}</p>
             </div>
             <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold">
-              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#18b968]" />
+              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#1677ff]" />
               <Printer size={18} /> Print receipt
             </label>
             <div className="mt-4 grid grid-cols-[.65fr_1.35fr] gap-2">
@@ -1051,7 +976,7 @@ function Inventory({
                   await transfer({ itemId: selected.id, quantity, from, to, printReceipt });
                   if (printReceipt) window.setTimeout(() => window.print(), 150);
                 }}
-                className="rounded-xl bg-[#18b968] py-3 font-bold text-white disabled:opacity-45"
+                className="rounded-xl bg-[#1677ff] py-3 font-bold text-white disabled:opacity-45"
               >
                 {busy ? "Transferring…" : "DONE · Transfer Stock"}
               </button>
@@ -1180,7 +1105,7 @@ function Transactions({
         <a
           href={`/api/reports/movements?from=${from}&to=${to}`}
           download
-          className="ml-auto flex items-center gap-2 rounded-xl bg-[#17352a] px-4 py-2.5 text-sm font-bold text-white"
+          className="ml-auto flex items-center gap-2 rounded-xl bg-[#0e1b33] px-4 py-2.5 text-sm font-bold text-white"
         >
           <FileDown size={17} />
           Export CSV
@@ -1246,14 +1171,14 @@ function Callout({
   return (
     <div className="grid min-h-[60vh] place-items-center">
       <div className="spring-card max-w-lg rounded-[26px] bg-white p-8 text-center shadow-[0_16px_40px_rgba(0,0,0,.08)]">
-        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#18b968]">
+        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#1677ff]">
           <Icon size={29} />
         </span>
         <h2 className="mt-5 text-2xl font-black">{title}</h2>
         <p className="mt-2 text-slate-500">{text}</p>
         <button
           onClick={click}
-          className="mt-6 rounded-xl bg-[#18b968] px-6 py-3 font-bold text-white"
+          className="mt-6 rounded-xl bg-[#1677ff] px-6 py-3 font-bold text-white"
         >
           {button}
         </button>
@@ -1310,7 +1235,7 @@ function NewItem({
         </div>
         <label className="mt-4 block text-sm font-bold">Description</label>
         <textarea name="description" className={field} />
-        <button className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
           Create item
         </button>
       </form>
@@ -1410,7 +1335,7 @@ function EditItem({
           defaultValue={item.description ?? ""}
           className={field}
         />
-        <button className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
           Save changes
         </button>
       </form>
@@ -1492,7 +1417,7 @@ function NewEmployee({
               </option>
             ))}
         </select>
-        <button className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
           Create staff and QR
         </button>
       </form>
@@ -1517,7 +1442,7 @@ function ItemDetails({
   return (
     <Modal title={item.name} close={close} wide>
       <div className="grid gap-5 sm:grid-cols-[.8fr_1.2fr]">
-        <div className="rounded-2xl bg-[#effaf3] p-5">
+        <div className="rounded-2xl bg-[#eef5ff] p-5">
           <p className="text-xs font-bold text-emerald-700">{item.sku}</p>
           <p className="mt-3 text-4xl font-black">{item.currentQuantity}</p>
           <p className="text-sm text-slate-500">{item.unit} available</p>
@@ -1542,7 +1467,7 @@ function ItemDetails({
             <>
               <button
                 onClick={receive}
-                className="mt-5 w-full rounded-xl bg-[#18b968] py-3 font-bold text-white"
+                className="mt-5 w-full rounded-xl bg-[#1677ff] py-3 font-bold text-white"
               >
                 Receive this item
               </button>
@@ -1597,7 +1522,7 @@ function EmployeeCard({
         id="employee-print-card"
         className="rounded-[24px] border-2 border-emerald-100 bg-white p-6 text-center"
       >
-        <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#18b968] text-xl font-black text-white">
+        <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#1677ff] text-xl font-black text-white">
           {employee.fullName
             .split(" ")
             .map((x) => x[0])
@@ -1627,7 +1552,7 @@ function EmployeeCard({
       </div>
       <button
         onClick={() => window.print()}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#17352a] py-3 font-bold text-white"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e1b33] py-3 font-bold text-white"
       >
         <Printer size={18} />
         Print employee card
@@ -1748,7 +1673,7 @@ function StockForm({
                 <button
                   type="button"
                   onClick={() => setScanner(true)}
-                  className="mb-0 flex h-[46px] items-center gap-2 rounded-xl bg-[#17352a] px-4 text-sm font-bold text-white"
+                  className="mb-0 flex h-[46px] items-center gap-2 rounded-xl bg-[#0e1b33] px-4 text-sm font-bold text-white"
                 >
                   <Camera size={17} />
                   Scan QR
@@ -1862,7 +1787,7 @@ function StockForm({
         <textarea name="notes" className={field} />
         <button
           disabled={busy || !lines.length || (kind === "return" && !issueId)}
-          className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white disabled:opacity-50"
         >
           {busy ? "Saving transaction…" : title}
         </button>
@@ -1980,7 +1905,7 @@ function CameraScanner({
           />
           <button
             onClick={() => manual.trim() && found(manual.trim())}
-            className="mt-2 rounded-xl bg-[#17352a] px-4 font-bold text-white"
+            className="mt-2 rounded-xl bg-[#0e1b33] px-4 font-bold text-white"
           >
             Use ID
           </button>
@@ -2027,7 +1952,7 @@ function MovementDetails({
       </dl>
       <button
         onClick={() => window.print()}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#17352a] py-3 font-bold text-white"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0e1b33] py-3 font-bold text-white"
       >
         <Printer size={18} />
         Print record
@@ -2151,7 +2076,7 @@ function NewUser({
           Use at least 10 characters. The user should change it after signing
           in.
         </p>
-        <button className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
           Create user
         </button>
       </form>
@@ -2230,7 +2155,7 @@ function PasswordSettings({
           )}
           <button
             disabled={busy}
-            className="mt-6 w-full rounded-xl bg-[#17352a] py-3.5 font-bold text-white"
+            className="mt-6 w-full rounded-xl bg-[#0e1b33] py-3.5 font-bold text-white"
           >
             {busy ? "Updating…" : "Change password"}
           </button>
