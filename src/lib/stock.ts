@@ -71,6 +71,70 @@ export async function receiveStock(input: { officerId: string; supplier: string;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+export async function transferStock(input: {
+  itemId: string;
+  officerId: string;
+  quantity: number;
+  from: string;
+  to: string;
+  printReceipt?: boolean;
+}) {
+  validateTransferInput(input.quantity, input.from, input.to);
+
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.inventoryItem.findUnique({ where: { id: input.itemId } });
+    if (!item) throw new AppError(404, "ITEM_NOT_FOUND", "Product was not found.");
+    if (item.status !== RecordStatus.ACTIVE)
+      throw new AppError(422, "ITEM_INACTIVE", `${item.name} is inactive.`);
+    const quantity = new Prisma.Decimal(input.quantity);
+    if (item.currentQuantity.lt(quantity))
+      throw new AppError(409, "INSUFFICIENT_STOCK", `Only ${item.currentQuantity} ${item.unit} of ${item.name} are available.`);
+
+    const next = item.currentQuantity.minus(quantity);
+    const changed = await tx.inventoryItem.updateMany({
+      where: { id: item.id, version: item.version, currentQuantity: { gte: quantity } },
+      data: { currentQuantity: next, version: { increment: 1 } },
+    });
+    if (changed.count !== 1)
+      throw new AppError(409, "STOCK_CHANGED", `${item.name} stock changed. Review and submit again.`);
+
+    const code = txCode("TRF");
+    const movement = await tx.stockMovement.create({
+      data: {
+        transactionCode: code,
+        movementType: MovementType.STOCK_ISSUED,
+        itemId: item.id,
+        quantity,
+        previousQuantity: item.currentQuantity,
+        newQuantity: next,
+        officerId: input.officerId,
+        sourceLocation: input.from,
+        destinationLocation: input.to,
+        printReceipt: input.printReceipt ?? false,
+        reference: `${input.from} → ${input.to}`,
+      },
+    });
+    await stockAlert(tx, item.id, item.name, next, new Prisma.Decimal(9));
+    await tx.auditLog.create({
+      data: {
+        userId: input.officerId,
+        action: "STOCK_TRANSFERRED",
+        entityType: "StockMovement",
+        entityId: movement.id,
+        newValue: { transactionCode: code, item: item.name, quantity: input.quantity, from: input.from, to: input.to },
+      },
+    });
+    return movement;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export function validateTransferInput(quantity: number, from: string, to: string) {
+  if (!Number.isInteger(quantity) || quantity <= 0)
+    throw new AppError(422, "INVALID_QUANTITY", "Quantity must be a whole number greater than zero.");
+  if (from === to)
+    throw new AppError(422, "SAME_LOCATION", "Source and destination must be different.");
+}
+
 export async function returnStock(input:{employeeId:string;officerId:string;originalIssueId?:string;notes?:string;lines:Line[]}){
   const lines=normalizeLines(input.lines);
   return prisma.$transaction(async tx=>{

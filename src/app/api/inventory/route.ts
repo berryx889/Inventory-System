@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     await requireSession();
     const q = new URL(request.url).searchParams.get("q") ?? "";
     const items = await prisma.inventoryItem.findMany({ where: q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { sku: { contains: q, mode: "insensitive" } }] } : undefined, include: { category: true }, orderBy: { name: "asc" } });
-    return Response.json({ items: items.map((item) => ({ ...item, currentQuantity: Number(item.currentQuantity), minimumStockLevel: Number(item.minimumStockLevel), maximumStockLevel: item.maximumStockLevel ? Number(item.maximumStockLevel) : null, unitCost: item.unitCost ? Number(item.unitCost) : null, inventoryStatus: item.currentQuantity.eq(0) ? "OUT_OF_STOCK" : item.currentQuantity.lte(item.minimumStockLevel) ? "LOW_STOCK" : "IN_STOCK" })) });
+    return Response.json({ items: items.map((item) => ({ ...item, currentQuantity: Number(item.currentQuantity), minimumStockLevel: Number(item.minimumStockLevel), maximumStockLevel: item.maximumStockLevel ? Number(item.maximumStockLevel) : null, unitCost: item.unitCost ? Number(item.unitCost) : null, inventoryStatus: item.currentQuantity.eq(0) ? "OUT_OF_STOCK" : item.currentQuantity.lt(10) ? "LOW_STOCK" : "IN_STOCK" })) });
   } catch (error) { return apiError(error); }
 }
 

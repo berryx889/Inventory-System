@@ -160,6 +160,7 @@ model InventoryItem {
   categoryId        String
   category          InventoryCategory  @relation(fields: [categoryId], references: [id])
   unit              String
+  storageLocation   String             @default("A-12")
   currentQuantity   Decimal            @default(0) @db.Decimal(14, 3)
   minimumStockLevel Decimal            @default(0) @db.Decimal(14, 3)
   maximumStockLevel Decimal?           @db.Decimal(14, 3)
@@ -318,6 +319,9 @@ model StockMovement {
   stockReturn      StockReturn?  @relation(fields: [returnId], references: [id])
   reference        String?
   notes            String?
+  sourceLocation   String?
+  destinationLocation String?
+  printReceipt     Boolean             @default(false)
   createdAt        DateTime      @default(now())
 
   @@index([itemId, createdAt])
