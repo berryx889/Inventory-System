@@ -7,11 +7,9 @@
 
 @media print {
   body * { visibility: hidden !important; }
-  #transfer-receipt, #transfer-receipt * { visibility: visible !important; }
-  #transfer-receipt { display: block !important; position: fixed; inset: 0; width: 80mm; margin: 12mm auto; padding: 8mm; color: #111; font-family: Arial, sans-serif; }
-  #transfer-receipt h1 { font-size: 22px; margin-bottom: 4px; }
-  #transfer-receipt p { margin: 8px 0; }
-  @page { size: 80mm auto; margin: 0; }
+  #employee-print-card, #employee-print-card * { visibility: visible !important; }
+  #employee-print-card { position: fixed; inset: 0; width: 90mm; height: fit-content; margin: 15mm auto; border: 2px solid #b7ead0 !important; box-shadow: none !important; }
+  @page { size: A4; margin: 0; }
 }
 
 @theme inline {
@@ -40,36 +38,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .bg-indigo-50, .bg-orange-50 { background-color: #eafff3 !important; }
 .text-orange-600 { color: #18b968 !important; }
 .hover\:border-indigo-300:hover { border-color: #72dca7 !important; }
-
-.form-field {
-  background: #f7f8fa;
-  border: 1px solid #e2e5e9;
-  border-radius: 12px;
-  display: block;
-  margin-top: 8px;
-  padding: 12px 14px;
-  width: 100%;
-}
-
-.form-field:focus {
-  background: white;
-  border-color: #1168c4;
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(17, 104, 196, .1);
-}
-
-.product-card {
-  transition: transform .22s cubic-bezier(.22, .75, .24, 1), box-shadow .22s ease;
-}
-
-.product-card:hover {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .1);
-  transform: translateY(-2px);
-}
-
-.login-stock-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='220' viewBox='0 0 280 220'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.055' stroke-width='1.5'%3E%3Cpath d='M30 35l22-12 22 12v25L52 72 30 60zM30 35l22 13 22-13M52 48v24'/%3E%3Cpath d='M184 30h38v34h-38zM191 24h24M203 13v11'/%3E%3Cpath d='M165 150l25-14 25 14v28l-25 14-25-14zM165 150l25 14 25-14M190 164v28'/%3E%3C/g%3E%3C/svg%3E");
-}
 
 .login-canvas {
   position: relative;
