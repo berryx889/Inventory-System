@@ -6,6 +6,7 @@ StockFlow is a fully online Node.js application. Docker is optional and is only 
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
+DIRECT_URL=postgresql://USER:PASSWORD@DIRECT_HOST:5432/DATABASE?sslmode=require
 SESSION_SECRET=GENERATE_A_RANDOM_SECRET_WITH_AT_LEAST_32_CHARACTERS
 NODE_ENV=production
 ```
@@ -16,12 +17,16 @@ Generate a session secret with `openssl rand -base64 48`. Store it in the hostin
 
 Use Node.js 20 or newer.
 
+Copy `.env.production.example` to `.env.production.local`, use the pooled Neon URL for `DATABASE_URL`, the non-pooled Neon URL for `DIRECT_URL`, and enter a private administrator email and strong password. Never commit `.env.production.local`.
+
 ```bash
 npm ci
-npm run db:migrate:deploy
+npm run db:bootstrap:production
 npm run build
 npm start
 ```
+
+`db:bootstrap:production` validates the secret file, applies migrations through the direct URL, and creates or rotates only the named administrator. Demo data is created only when `SEED_DEMO_DATA="true"` is explicitly set.
 
 The application exposes `/api/health`. Configure the host health check to use that path. A `200` response means both the web process and PostgreSQL are available.
 
