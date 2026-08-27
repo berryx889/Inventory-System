@@ -33,13 +33,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Seeded accounts all use the temporary password `ChangeMe123!`:
-
-- `admin@warehouse.local`
-- `officer@warehouse.local`
-- `manager@warehouse.local`
-
-Change or remove seeded credentials before any real deployment.
+Seeding requires private `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` values. Production bootstrap creates only that administrator unless `SEED_DEMO_DATA="true"` is explicitly enabled. The login screen never publishes or prefills credentials.
 
 ## Production requirements
 

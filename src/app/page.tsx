@@ -740,14 +740,16 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
           <input
             name="email"
             type="email"
-            defaultValue="admin@warehouse.local"
+            autoComplete="email"
+            placeholder="you@company.com"
             className={field}
           />
           <label className="mt-4 block text-sm font-bold">Password</label>
           <input
             name="password"
             type="password"
-            defaultValue="ChangeMe123!"
+            autoComplete="current-password"
+            placeholder="Enter your password"
             className={field}
           />
           <button
