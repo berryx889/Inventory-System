@@ -292,8 +292,8 @@ export default function App() {
   const activeItems = items.filter((i) => i.status === "ACTIVE"),
     activeEmployees = employees.filter((e) => e.status === "ACTIVE");
   const sidebar = (
-    <aside className="flex h-full w-[min(86vw,18rem)] flex-col border-r border-emerald-100 bg-[#f5fbf7] text-[#17352a] lg:w-64">
-      <div className="flex h-18 items-center gap-3 border-b border-emerald-100 px-5">
+    <aside className="flex h-full w-[min(86vw,18rem)] flex-col border-r border-black/[.06] bg-white text-[#1d1d1f] lg:w-64">
+      <div className="flex h-18 items-center gap-3 border-b border-black/[.06] px-5">
         <div className="grid size-10 place-items-center rounded-[14px] bg-[#18b968] text-white">
           <Boxes size={21} />
         </div>
@@ -313,10 +313,10 @@ export default function App() {
               setView(label);
               setMenu(false);
             }}
-            className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm ${view === label ? "bg-white font-bold text-[#0b8f4c] shadow-sm ring-1 ring-emerald-100" : "text-[#567267] hover:bg-[#e7f7ed]"}`}
+            className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${view === label ? "bg-[#f2f2f4] font-bold text-[#1d1d1f]" : "text-[#6e6e73] hover:bg-[#f7f7f8]"}`}
           >
             <span
-              className={`grid size-9 place-items-center rounded-xl ${view === label ? "bg-[#18b968] text-white" : "bg-[#def4e7] text-[#168b50]"}`}
+              className={`grid size-9 place-items-center rounded-[10px] ${view === label ? "bg-[#18a85f] text-white" : "bg-[#f2f2f4] text-[#6e6e73]"}`}
             >
               <Icon size={18} />
             </span>
@@ -324,7 +324,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <div className="m-3 rounded-2xl border border-emerald-100 bg-white p-4">
+      <div className="m-3 rounded-2xl bg-[#f5f5f7] p-4">
         <b className="text-sm">{user!.name}</b>
         <div className="text-xs text-slate-500">
           {user!.role.replaceAll("_", " ")}
@@ -334,7 +334,7 @@ export default function App() {
             await fetch("/api/auth/logout", { method: "POST" });
             setAuth("out");
           }}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e8f7ee] py-2.5 text-xs font-bold text-[#14683e]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,.06)]"
         >
           <LogOut size={15} />
           Log out
@@ -343,7 +343,7 @@ export default function App() {
     </aside>
   );
   return (
-    <div className="min-h-dvh bg-[#f8f7f3] text-[#17221f]">
+    <div className="min-h-dvh bg-[#f5f5f7] text-[#1d1d1f]">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         {sidebar}
       </div>
@@ -357,7 +357,7 @@ export default function App() {
         </div>
       )}
       <main className="pb-20 lg:ml-64 lg:pb-0">
-        <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur sm:px-7">
+        <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-black/[.06] bg-white/80 px-4 backdrop-blur-xl sm:px-7">
           <button
             className="grid size-10 place-items-center rounded-xl border lg:hidden"
             onClick={() => setMenu(true)}
@@ -682,7 +682,7 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
     [error, setError] = useState(""),
     [showPassword, setShowPassword] = useState(false);
   return (
-    <main className="warehouse-pattern grid min-h-dvh bg-[#18b968] lg:grid-cols-2">
+    <main className="grid min-h-dvh bg-[#111113] lg:grid-cols-2">
       <section className="hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#18b968]">
@@ -702,9 +702,9 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
         </div>
         <p>Secure online inventory control</p>
       </section>
-      <section className="login-canvas grid place-items-center bg-[#f8f7f3] p-5 lg:rounded-l-[44px]">
+      <section className="login-canvas grid place-items-center bg-[#f5f5f7] p-5 lg:rounded-l-[36px]">
         <form
-          className="login-card w-full max-w-md rounded-[32px] bg-white p-7 shadow-[0_24px_70px_rgba(23,53,42,.14)]"
+          className="login-card w-full max-w-md rounded-[28px] bg-white p-7 shadow-[0_24px_70px_rgba(0,0,0,.10)] sm:p-9"
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);
@@ -824,11 +824,12 @@ function Dashboard({
     low = items.filter((i) => i.inventoryStatus !== "IN_STOCK").length;
   return (
     <>
-      <section className="warehouse-pattern overflow-hidden rounded-[30px] bg-[#18b968] p-6 text-white">
-        <p className="text-sm font-black">GOOD MORNING</p>
-        <h2 className="mt-3 max-w-2xl text-4xl font-black leading-tight">
+      <section className="premium-hero overflow-hidden rounded-[28px] bg-white p-7 sm:p-9">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-[#11864d]">Good morning</p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-[#1d1d1f] sm:text-5xl">
           Everything your teams need, ready when they arrive.
         </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6e6e73] sm:text-base">Live inventory, staff collections, and warehouse activity in one clear view.</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ["Issue stock", ScanLine, () => action("issue")],
@@ -841,7 +842,7 @@ function Dashboard({
               <button
                 key={l as string}
                 onClick={fn as () => void}
-                className="quick-action spring-card rounded-[22px] bg-white p-4 text-left text-[#17352a] shadow-[0_10px_25px_rgba(10,93,58,.12)]"
+                className="quick-action spring-card rounded-[18px] bg-[#f5f5f7] p-4 text-left text-[#1d1d1f]"
               >
                 <Icon className="text-[#18b968]" />
                 <b className="mt-3 block text-sm">{l as string}</b>
@@ -860,7 +861,7 @@ function Dashboard({
             employees.filter((e) => e.status === "ACTIVE").length,
           ],
         ].map(([a, b]) => (
-          <article key={a} className="metric-card spring-card rounded-[26px] p-5 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
+          <article key={a} className="metric-card spring-card rounded-[22px] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
             <p className="text-sm text-slate-500">{a}</p>
             <b className="mt-1 block text-3xl">{b}</b>
           </article>
@@ -895,7 +896,7 @@ function Inventory({
           <button
             key={i.id}
             onClick={() => select(i)}
-            className="spring-card flex items-center gap-4 rounded-[26px] bg-white p-4 text-left shadow-[0_12px_32px_rgba(23,53,42,.08)]"
+            className="spring-card flex items-center gap-4 rounded-[22px] bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.04)]"
           >
             <div
               className="size-20 shrink-0 rounded-2xl bg-[#effaf3] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
@@ -949,7 +950,7 @@ function Employees({
           <button
             key={e.id}
             onClick={() => select(e)}
-            className="spring-card rounded-[26px] bg-white p-5 text-left shadow-[0_12px_32px_rgba(23,53,42,.08)]"
+            className="spring-card rounded-[22px] bg-white p-5 text-left shadow-[0_1px_2px_rgba(0,0,0,.04)]"
           >
             <div className="flex items-center gap-3">
               <span className="grid size-12 place-items-center rounded-full bg-emerald-100 font-black text-emerald-700">
@@ -985,7 +986,7 @@ function Clients({ rows }: { rows: Client[] }) {
       <Head title="Clients" text="Organizations receiving cleaning services." />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((c) => (
-          <article key={c.id} className="spring-card rounded-[26px] bg-white p-5 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
+          <article key={c.id} className="spring-card rounded-[22px] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
             <span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
               <Building2 />
             </span>
@@ -1016,7 +1017,7 @@ function Transactions({
   return (
     <>
       <Head title="Transactions" text="Immutable stock movement ledger." />
-      <div className="mb-3 flex flex-wrap items-end gap-2 rounded-[24px] bg-white p-3 shadow-[0_10px_28px_rgba(23,53,42,.07)]">
+      <div className="mb-3 flex flex-wrap items-end gap-2 rounded-[20px] bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
         <label className="text-xs font-bold text-slate-500">
           FROM
           <input
@@ -1044,7 +1045,7 @@ function Transactions({
           Export CSV
         </a>
       </div>
-      <section className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_32px_rgba(23,53,42,.08)]">
+      <section className="overflow-hidden rounded-[22px] bg-white shadow-[0_1px_2px_rgba(0,0,0,.04)]">
         <div className="divide-y">
           {filtered.length ? (
             filtered.map((m) => (
@@ -1103,7 +1104,7 @@ function Callout({
 }) {
   return (
     <div className="grid min-h-[60vh] place-items-center">
-      <div className="spring-card max-w-lg rounded-[30px] bg-white p-8 text-center shadow-[0_18px_50px_rgba(23,53,42,.11)]">
+      <div className="spring-card max-w-lg rounded-[26px] bg-white p-8 text-center shadow-[0_16px_40px_rgba(0,0,0,.08)]">
         <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#18b968]">
           <Icon size={29} />
         </span>
@@ -1923,7 +1924,7 @@ function UserAdmin({
         button="Add user"
         click={add}
       />
-      <section className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_32px_rgba(23,53,42,.08)]">
+      <section className="overflow-hidden rounded-[22px] bg-white shadow-[0_1px_2px_rgba(0,0,0,.04)]">
         <div className="divide-y">
           {rows.map((row) => (
             <div
@@ -2030,7 +2031,7 @@ function PasswordSettings({
         title="Security settings"
         text="Update your password without exposing it to administrators."
       />
-      <section className="max-w-xl rounded-[28px] bg-white p-6 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
+      <section className="max-w-xl rounded-[22px] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
             <KeyRound />
