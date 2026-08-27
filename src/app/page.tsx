@@ -135,7 +135,7 @@ const nav: [View, typeof Boxes][] = [
   ["Settings", Settings],
 ];
 const field =
-  "mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#1677ff] focus:ring-2 focus:ring-emerald-100";
+  "mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#4147f5] focus:ring-2 focus:ring-emerald-100";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
@@ -281,7 +281,7 @@ export default function App() {
   if (auth === "loading")
     return (
       <div className="grid min-h-dvh place-items-center bg-[#f7faf8]">
-        <div className="size-10 animate-spin rounded-full border-4 border-emerald-100 border-t-[#1677ff]" />
+        <div className="size-10 animate-spin rounded-full border-4 border-emerald-100 border-t-[#4147f5]" />
       </div>
     );
   if (auth === "out")
@@ -297,32 +297,33 @@ export default function App() {
   const activeItems = items.filter((i) => i.status === "ACTIVE"),
     activeEmployees = employees.filter((e) => e.status === "ACTIVE");
   return (
-    <div className="min-h-dvh bg-[#f4f7fb] text-[#172033]">
-      <header className="sticky top-0 z-40 bg-[#0e1b33] text-white shadow-lg">
+    <div className="min-h-dvh bg-[#e9e9ed] text-[#101114]">
+      <header className="patch-header sticky top-0 z-40 border-b border-black/[.06] bg-white text-[#101114] shadow-[0_8px_28px_rgba(0,0,0,.06)]">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <button onClick={() => setView("Inventory")} className="flex shrink-0 items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[#1677ff] text-white"><Boxes size={21} /></span>
-            <span className="text-left"><b className="block text-lg leading-none">StockFlow</b><small className="text-white/55">Warehouse control</small></span>
+          <button onClick={() => setView("Inventory")} className="patch-brand flex shrink-0 items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-xl bg-[#4147f5] text-white"><Boxes size={21} /></span>
+            <span className="text-left"><b className="block text-lg leading-none">StockFlow</b><small className="text-slate-400">Warehouse control</small></span>
           </button>
           <nav className="order-3 flex w-full gap-1 overflow-x-auto pb-0.5 md:order-none md:ml-3 md:w-auto md:flex-1">
             {nav.filter(([label]) => label !== "Users" || user!.role === "ADMIN").map(([label, Icon]) => (
               <button
                 key={label}
                 onClick={() => setView(label)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${view === label ? "bg-[#1677ff] text-white shadow-md" : "text-white/65 hover:bg-white/10 hover:text-white"}`}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${view === label ? "bg-[#4147f5] text-white shadow-md" : "text-slate-500 hover:bg-[#f1f1f5] hover:text-black"}`}
               >
                 <Icon size={16} />{label}
               </button>
             ))}
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div className="hidden text-right lg:block"><b className="block text-xs">{user!.name}</b><span className="text-[10px] text-white/50">{user!.role.replaceAll("_", " ")}</span></div>
-            <span className="grid size-9 place-items-center rounded-full bg-white/10 text-sm font-bold">{user!.name.slice(0, 1).toUpperCase()}</span>
+            <div className="hidden text-right lg:block"><b className="block text-xs">{user!.name}</b><span className="text-[10px] text-slate-400">{user!.role.replaceAll("_", " ")}</span></div>
+            <span className="grid size-9 place-items-center rounded-full bg-[#4147f5] text-sm font-bold text-white">{user!.name.slice(0, 1).toUpperCase()}</span>
             <button
               aria-label="Log out"
               onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); setAuth("out"); }}
-              className="grid size-9 place-items-center rounded-xl bg-white/10 hover:bg-white/20"
+              className="grid size-9 place-items-center rounded-xl bg-[#f1f1f5] text-slate-600 hover:bg-[#e5e5eb]"
             ><LogOut size={17} /></button>
+            <span className="hidden items-center gap-1.5 pl-1 xl:flex" aria-hidden="true"><i className="size-2 rounded-full bg-[#4147f5]" /><i className="size-2 rounded-full bg-[#4147f5]" /><i className="size-2 rounded-full bg-[#4147f5]" /></span>
           </div>
         </div>
       </header>
@@ -625,7 +626,7 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
     <main className="grid min-h-dvh bg-[#111113] lg:grid-cols-2">
       <section className="hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#1677ff]">
+          <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#4147f5]">
             <Boxes />
           </span>
           <b className="text-xl">StockFlow</b>
@@ -667,7 +668,7 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
             }
           }}
         >
-          <div className="grid size-12 place-items-center rounded-2xl bg-[#1677ff] text-white lg:hidden">
+          <div className="grid size-12 place-items-center rounded-2xl bg-[#4147f5] text-white lg:hidden">
             <Boxes />
           </div>
           <h2 className="mt-5 text-3xl font-black">Welcome back</h2>
@@ -701,14 +702,14 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
               onClick={() => setShowPassword((visible) => !visible)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
-              className="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#1677ff]"
+              className="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#4147f5]"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
           <button
             disabled={busy}
-            className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white"
+            className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -738,7 +739,7 @@ function Head({
       {button && (
         <button
           onClick={click}
-          className="flex items-center gap-2 rounded-xl bg-[#1677ff] px-4 py-2.5 text-sm font-bold text-white"
+          className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-2.5 text-sm font-bold text-white"
         >
           <Plus size={17} />
           {button}
@@ -764,7 +765,7 @@ function Dashboard({
     low = items.filter((i) => i.inventoryStatus !== "IN_STOCK").length;
   return (
     <>
-      <section className="premium-hero inventory-hero overflow-hidden rounded-[28px] bg-[#1677ff] p-7 text-white sm:p-9">
+      <section className="premium-hero inventory-hero overflow-hidden rounded-[28px] bg-[#4147f5] p-7 text-white sm:p-9">
         <p className="text-xs font-bold uppercase tracking-[.16em] text-white/80">Good morning</p>
         <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-white sm:text-5xl">
           Everything your teams need, ready when they arrive.
@@ -784,7 +785,7 @@ function Dashboard({
                 onClick={fn as () => void}
                 className="quick-action spring-card rounded-[18px] bg-white p-4 text-left text-[#1d1d1f] shadow-[0_8px_24px_rgba(0,0,0,.08)]"
               >
-                <Icon className="text-[#1677ff]" />
+                <Icon className="text-[#4147f5]" />
                 <b className="mt-3 block text-sm">{l as string}</b>
               </button>
             );
@@ -844,18 +845,19 @@ function Inventory({
   const selected = visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0];
 
   return (
-    <div className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_40px_rgba(0,0,0,.08)] xl:grid xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,.8fr)]">
-      <section className="bg-[#f5f6f8] p-4 sm:p-6">
+    <div className="patch-workspace overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(0,0,0,.10)] xl:grid xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,.8fr)]">
+      <section className="bg-[#f7f7fa] p-5 sm:p-7">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black">Inventory · Products</h2>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Stock workspace</p>
+            <h2 className="text-3xl font-black tracking-[-.04em]">Inventory · Products</h2>
             <p className="mt-1 text-sm text-slate-500">
               Select a product to transfer stock.
             </p>
           </div>
           <button
             onClick={add}
-            className="hidden items-center gap-2 rounded-xl bg-[#1677ff] px-4 py-2.5 text-sm font-bold text-white sm:flex"
+            className="hidden items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-2.5 text-sm font-bold text-white sm:flex"
           >
             <Plus size={17} /> Add product
           </button>
@@ -884,10 +886,10 @@ function Inventory({
                   setSelectedId(item.id);
                   setQuantity(1);
                 }}
-                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#1677ff]" : "ring-1 ring-black/[.05]"}`}
+                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#4147f5]" : "ring-1 ring-black/[.05]"}`}
               >
                 {active && (
-                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#1677ff] text-white">
+                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#4147f5] text-white">
                     <Check size={15} />
                   </span>
                 )}
@@ -911,10 +913,10 @@ function Inventory({
         </div>
       </section>
 
-      <aside className="border-t border-slate-200 bg-white p-5 sm:p-6 xl:border-l xl:border-t-0">
+      <aside className="patch-checkout border-t border-slate-200 bg-white p-5 sm:p-7 xl:border-l xl:border-t-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#1267c4]">Transaction</p>
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#343ae6]">Transaction</p>
             <h2 className="mt-1 text-2xl font-black">Stock Transfer</h2>
           </div>
           <ArrowLeftRight className="text-slate-400" />
@@ -942,7 +944,7 @@ function Inventory({
           <>
             <p className="text-sm font-bold">Selected Product</p>
             <div className="mt-2 flex items-center gap-3 rounded-2xl bg-[#f1f6ff] p-3">
-              <PackageCheck className="text-[#1677ff]" />
+              <PackageCheck className="text-[#4147f5]" />
               <div>
                 <b>{selected.name} · {selected.unit}</b>
                 <p className="text-xs text-slate-500">
@@ -956,7 +958,7 @@ function Inventory({
                 <Minus size={18} />
               </button>
               <b className="text-center text-lg">{quantity}</b>
-              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#1677ff] text-white">
+              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#4147f5] text-white">
                 <Plus size={18} />
               </button>
             </div>
@@ -965,7 +967,7 @@ function Inventory({
               <p className="mt-1">{from} → {to}</p>
             </div>
             <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold">
-              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#1677ff]" />
+              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#4147f5]" />
               <Printer size={18} /> Print receipt
             </label>
             <div className="mt-4 grid grid-cols-[.65fr_1.35fr] gap-2">
@@ -976,7 +978,7 @@ function Inventory({
                   await transfer({ itemId: selected.id, quantity, from, to, printReceipt });
                   if (printReceipt) window.setTimeout(() => window.print(), 150);
                 }}
-                className="rounded-xl bg-[#1677ff] py-3 font-bold text-white disabled:opacity-45"
+                className="rounded-xl bg-[#4147f5] py-3 font-bold text-white disabled:opacity-45"
               >
                 {busy ? "Transferring…" : "DONE · Transfer Stock"}
               </button>
@@ -1171,14 +1173,14 @@ function Callout({
   return (
     <div className="grid min-h-[60vh] place-items-center">
       <div className="spring-card max-w-lg rounded-[26px] bg-white p-8 text-center shadow-[0_16px_40px_rgba(0,0,0,.08)]">
-        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#1677ff]">
+        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#4147f5]">
           <Icon size={29} />
         </span>
         <h2 className="mt-5 text-2xl font-black">{title}</h2>
         <p className="mt-2 text-slate-500">{text}</p>
         <button
           onClick={click}
-          className="mt-6 rounded-xl bg-[#1677ff] px-6 py-3 font-bold text-white"
+          className="mt-6 rounded-xl bg-[#4147f5] px-6 py-3 font-bold text-white"
         >
           {button}
         </button>
@@ -1235,7 +1237,7 @@ function NewItem({
         </div>
         <label className="mt-4 block text-sm font-bold">Description</label>
         <textarea name="description" className={field} />
-        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">
           Create item
         </button>
       </form>
@@ -1335,7 +1337,7 @@ function EditItem({
           defaultValue={item.description ?? ""}
           className={field}
         />
-        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">
           Save changes
         </button>
       </form>
@@ -1417,7 +1419,7 @@ function NewEmployee({
               </option>
             ))}
         </select>
-        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">
           Create staff and QR
         </button>
       </form>
@@ -1467,7 +1469,7 @@ function ItemDetails({
             <>
               <button
                 onClick={receive}
-                className="mt-5 w-full rounded-xl bg-[#1677ff] py-3 font-bold text-white"
+                className="mt-5 w-full rounded-xl bg-[#4147f5] py-3 font-bold text-white"
               >
                 Receive this item
               </button>
@@ -1522,7 +1524,7 @@ function EmployeeCard({
         id="employee-print-card"
         className="rounded-[24px] border-2 border-emerald-100 bg-white p-6 text-center"
       >
-        <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#1677ff] text-xl font-black text-white">
+        <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#4147f5] text-xl font-black text-white">
           {employee.fullName
             .split(" ")
             .map((x) => x[0])
@@ -1787,7 +1789,7 @@ function StockForm({
         <textarea name="notes" className={field} />
         <button
           disabled={busy || !lines.length || (kind === "return" && !issueId)}
-          className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white disabled:opacity-50"
         >
           {busy ? "Saving transaction…" : title}
         </button>
@@ -2076,7 +2078,7 @@ function NewUser({
           Use at least 10 characters. The user should change it after signing
           in.
         </p>
-        <button className="mt-6 w-full rounded-xl bg-[#1677ff] py-3.5 font-bold text-white">
+        <button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">
           Create user
         </button>
       </form>
