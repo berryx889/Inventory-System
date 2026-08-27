@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
+  ArrowLeftRight,
   Boxes,
   Building2,
   Camera,
@@ -14,6 +15,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Minus,
   PackageCheck,
   Plus,
   Printer,
@@ -44,6 +46,7 @@ type Item = {
   name: string;
   category: { name: string };
   unit: string;
+  storageLocation: string;
   currentQuantity: number;
   minimumStockLevel: number;
   maximumStockLevel: number | null;
@@ -76,6 +79,10 @@ type Client = {
   status: string;
 };
 type Location = { id: string; name: string; clientId: string };
+const mvpProductNames = new Set([
+  "Tissue", "Soap", "Broom", "Bleach", "Collector",
+  "Dust Bin", "Sweeper", "Mop", "Air Freshener", "T-Roll",
+]);
 type Movement = {
   id: string;
   transactionCode: string;
@@ -224,7 +231,7 @@ export default function App() {
       | "new-user"
       | null
     >(null),
-    [chosenItem, setChosenItem] = useState<Item | null>(null),
+    [chosenItem] = useState<Item | null>(null),
     [chosenEmployee, setChosenEmployee] = useState<Employee | null>(null),
     [chosenMove, setChosenMove] = useState<Movement | null>(null);
   const tell = (message: string) => {
@@ -394,11 +401,19 @@ export default function App() {
           {view === "Inventory" && (
             <Inventory
               items={items}
-              select={(x) => {
-                setChosenItem(x);
-                setModal("item");
-              }}
               add={() => setModal("new-item")}
+              busy={loading}
+              transfer={(data) =>
+                act(
+                  () =>
+                    request("/api/stock/transfers", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(data),
+                    }),
+                  "Stock transfer completed",
+                )
+              }
             />
           )}
           {view === "Employees" && (
@@ -876,56 +891,182 @@ function Dashboard({
 }
 function Inventory({
   items,
-  select,
   add,
+  busy,
+  transfer,
 }: {
   items: Item[];
-  select: (i: Item) => void;
   add: () => void;
+  busy: boolean;
+  transfer: (data: {
+    itemId: string;
+    quantity: number;
+    from: string;
+    to: string;
+    printReceipt: boolean;
+  }) => Promise<void>;
 }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
+  const [from, setFrom] = useState("Storage A");
+  const [to, setTo] = useState("Sales Floor");
+  const [quantity, setQuantity] = useState(1);
+  const [printReceipt, setPrintReceipt] = useState(false);
+  const visibleItems = items.filter((item) => mvpProductNames.has(item.name));
+  const filtered = visibleItems.filter((item) =>
+    item.name.toLowerCase().includes(query.toLowerCase()),
+  );
+  const selected = visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0];
+
   return (
-    <>
-      <Head
-        title="Inventory"
-        text="Live warehouse balances—select an item for details and stock activity."
-        button="New item"
-        click={add}
-      />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((i, n) => (
+    <div className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_40px_rgba(0,0,0,.08)] xl:grid xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,.8fr)]">
+      <section className="bg-[#f5f6f8] p-4 sm:p-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-black">Inventory · Products</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Select a product to transfer stock.
+            </p>
+          </div>
           <button
-            key={i.id}
-            onClick={() => select(i)}
-            className="spring-card flex items-center gap-4 rounded-[22px] bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.04)]"
+            onClick={add}
+            className="hidden items-center gap-2 rounded-xl bg-[#18b968] px-4 py-2.5 text-sm font-bold text-white sm:flex"
           >
-            <div
-              className="size-20 shrink-0 rounded-2xl bg-[#effaf3] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
-              style={{
-                backgroundPosition: [
-                  "0% 0%",
-                  "100% 0%",
-                  "0% 100%",
-                  "100% 100%",
-                ][n % 4],
-              }}
-            />
-            <div className="min-w-0 flex-1">
-              <b>{i.name}</b>
-              <p className="text-xs text-slate-500">
-                {i.sku} · {i.category.name}
-              </p>
-              <p className="mt-2 text-xl font-black">
-                {i.currentQuantity}{" "}
-                <span className="text-sm font-medium text-slate-500">
-                  {i.unit}
-                </span>
-              </p>
-              <Badge>{status(i)}</Badge>
-            </div>
+            <Plus size={17} /> Add product
           </button>
-        ))}
-      </div>
-    </>
+        </div>
+        <div className="my-4 flex flex-wrap gap-2">
+          <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
+            <Search size={17} className="text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search products…"
+              className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+          </label>
+          <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">
+            {filtered.length} products
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((item, index) => {
+            const active = selected?.id === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setQuantity(1);
+                }}
+                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#18b968]" : "ring-1 ring-black/[.05]"}`}
+              >
+                {active && (
+                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#18b968] text-white">
+                    <Check size={15} />
+                  </span>
+                )}
+                <div
+                  className="size-16 rounded-2xl bg-[#effaf3] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
+                  style={{
+                    backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4],
+                  }}
+                />
+                <h3 className="mt-3 text-lg font-black">{item.name}</h3>
+                <p className={`mt-2 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>
+                  In Stock: {item.currentQuantity} {item.unit}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">Unit: {item.unit}</p>
+                <p className="text-xs text-slate-500">
+                  Location: {item.storageLocation || "A-12"}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <aside className="border-t border-slate-200 bg-white p-5 sm:p-6 xl:border-l xl:border-t-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#18a85f]">Transaction</p>
+            <h2 className="mt-1 text-2xl font-black">Stock Transfer</h2>
+          </div>
+          <ArrowLeftRight className="text-slate-400" />
+        </div>
+        <div className="mt-5 space-y-4">
+          <label className="block text-sm font-bold">
+            From (Source Location)
+            <select value={from} onChange={(event) => setFrom(event.target.value)} className={field}>
+              <option>Storage A</option>
+              <option>Storage B</option>
+              <option>Sales Floor</option>
+            </select>
+          </label>
+          <label className="block text-sm font-bold">
+            To (Destination Location)
+            <select value={to} onChange={(event) => setTo(event.target.value)} className={field}>
+              <option>Sales Floor</option>
+              <option>Customer</option>
+              <option>Waste</option>
+            </select>
+          </label>
+        </div>
+        <div className="my-5 h-px bg-slate-100" />
+        {selected ? (
+          <>
+            <p className="text-sm font-bold">Selected Product</p>
+            <div className="mt-2 flex items-center gap-3 rounded-2xl bg-[#f4f8f5] p-3">
+              <PackageCheck className="text-[#18b968]" />
+              <div>
+                <b>{selected.name} · {selected.unit}</b>
+                <p className="text-xs text-slate-500">
+                  {selected.currentQuantity} available
+                </p>
+              </div>
+            </div>
+            <p className="mt-5 text-sm font-bold">Transfer Quantity</p>
+            <div className="mt-2 grid grid-cols-[48px_1fr_48px] items-center rounded-xl bg-[#f4f5f7] p-1">
+              <button aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="grid size-11 place-items-center rounded-lg bg-white shadow-sm">
+                <Minus size={18} />
+              </button>
+              <b className="text-center text-lg">{quantity}</b>
+              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#18b968] text-white">
+                <Plus size={18} />
+              </button>
+            </div>
+            <div className="mt-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
+              <b>Transfer: {quantity} × {selected.name}</b>
+              <p className="mt-1">{from} → {to}</p>
+            </div>
+            <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold">
+              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#18b968]" />
+              <Printer size={18} /> Print receipt
+            </label>
+            <div className="mt-4 grid grid-cols-[.65fr_1.35fr] gap-2">
+              <button onClick={() => setQuantity(1)} className="rounded-xl border border-slate-300 py-3 font-bold">Clear</button>
+              <button
+                disabled={busy || selected.currentQuantity < 1 || from === to}
+                onClick={async () => {
+                  await transfer({ itemId: selected.id, quantity, from, to, printReceipt });
+                  if (printReceipt) window.setTimeout(() => window.print(), 150);
+                }}
+                className="rounded-xl bg-[#18b968] py-3 font-bold text-white disabled:opacity-45"
+              >
+                {busy ? "Transferring…" : "DONE · Transfer Stock"}
+              </button>
+            </div>
+            <section id="stock-transfer-receipt" className="hidden">
+              <h1>StockFlow</h1><p>Stock Transfer Receipt</p><hr />
+              <p><b>{selected.name}</b>: {quantity} {selected.unit}</p>
+              <p>{from} → {to}</p><p>{new Date().toLocaleString()}</p>
+            </section>
+          </>
+        ) : (
+          <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No products are available.</p>
+        )}
+      </aside>
+    </div>
   );
 }
 function Employees({
