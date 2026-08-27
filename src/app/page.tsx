@@ -8,6 +8,8 @@ import {
   Camera,
   Check,
   FileDown,
+  Eye,
+  EyeOff,
   History,
   KeyRound,
   LogOut,
@@ -677,7 +679,8 @@ export default function App() {
 
 function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [showPassword, setShowPassword] = useState(false);
   return (
     <main className="warehouse-pattern grid min-h-dvh bg-[#18b968] lg:grid-cols-2">
       <section className="hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
@@ -699,9 +702,9 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
         </div>
         <p>Secure online inventory control</p>
       </section>
-      <section className="grid place-items-center bg-[#f8f7f3] p-5 lg:rounded-l-[44px]">
+      <section className="login-canvas grid place-items-center bg-[#f8f7f3] p-5 lg:rounded-l-[44px]">
         <form
-          className="w-full max-w-md rounded-[28px] border bg-white p-7 shadow-xl"
+          className="login-card w-full max-w-md rounded-[32px] bg-white p-7 shadow-[0_24px_70px_rgba(23,53,42,.14)]"
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);
@@ -745,13 +748,24 @@ function Login({ onSuccess }: { onSuccess: (u: User) => Promise<void> }) {
             className={field}
           />
           <label className="mt-4 block text-sm font-bold">Password</label>
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            className={field}
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              className={`${field} pr-12`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#18b968]"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           <button
             disabled={busy}
             className="mt-6 w-full rounded-xl bg-[#18b968] py-3.5 font-bold text-white"
@@ -827,7 +841,7 @@ function Dashboard({
               <button
                 key={l as string}
                 onClick={fn as () => void}
-                className="rounded-2xl bg-white p-4 text-left text-[#17352a]"
+                className="quick-action spring-card rounded-[22px] bg-white p-4 text-left text-[#17352a] shadow-[0_10px_25px_rgba(10,93,58,.12)]"
               >
                 <Icon className="text-[#18b968]" />
                 <b className="mt-3 block text-sm">{l as string}</b>
@@ -846,7 +860,7 @@ function Dashboard({
             employees.filter((e) => e.status === "ACTIVE").length,
           ],
         ].map(([a, b]) => (
-          <article key={a} className="rounded-2xl border bg-white p-5">
+          <article key={a} className="metric-card spring-card rounded-[26px] p-5 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
             <p className="text-sm text-slate-500">{a}</p>
             <b className="mt-1 block text-3xl">{b}</b>
           </article>
@@ -881,7 +895,7 @@ function Inventory({
           <button
             key={i.id}
             onClick={() => select(i)}
-            className="flex items-center gap-4 rounded-[22px] border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
+            className="spring-card flex items-center gap-4 rounded-[26px] bg-white p-4 text-left shadow-[0_12px_32px_rgba(23,53,42,.08)]"
           >
             <div
               className="size-20 shrink-0 rounded-2xl bg-[#effaf3] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
@@ -935,7 +949,7 @@ function Employees({
           <button
             key={e.id}
             onClick={() => select(e)}
-            className="rounded-[22px] border bg-white p-5 text-left shadow-sm hover:border-emerald-300"
+            className="spring-card rounded-[26px] bg-white p-5 text-left shadow-[0_12px_32px_rgba(23,53,42,.08)]"
           >
             <div className="flex items-center gap-3">
               <span className="grid size-12 place-items-center rounded-full bg-emerald-100 font-black text-emerald-700">
@@ -971,7 +985,7 @@ function Clients({ rows }: { rows: Client[] }) {
       <Head title="Clients" text="Organizations receiving cleaning services." />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((c) => (
-          <article key={c.id} className="rounded-[22px] border bg-white p-5">
+          <article key={c.id} className="spring-card rounded-[26px] bg-white p-5 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
             <span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
               <Building2 />
             </span>
@@ -1002,7 +1016,7 @@ function Transactions({
   return (
     <>
       <Head title="Transactions" text="Immutable stock movement ledger." />
-      <div className="mb-3 flex flex-wrap items-end gap-2 rounded-2xl border bg-white p-3">
+      <div className="mb-3 flex flex-wrap items-end gap-2 rounded-[24px] bg-white p-3 shadow-[0_10px_28px_rgba(23,53,42,.07)]">
         <label className="text-xs font-bold text-slate-500">
           FROM
           <input
@@ -1030,7 +1044,7 @@ function Transactions({
           Export CSV
         </a>
       </div>
-      <section className="overflow-hidden rounded-[22px] border bg-white">
+      <section className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_32px_rgba(23,53,42,.08)]">
         <div className="divide-y">
           {filtered.length ? (
             filtered.map((m) => (
@@ -1089,7 +1103,7 @@ function Callout({
 }) {
   return (
     <div className="grid min-h-[60vh] place-items-center">
-      <div className="max-w-lg rounded-[28px] border bg-white p-8 text-center shadow-lg">
+      <div className="spring-card max-w-lg rounded-[30px] bg-white p-8 text-center shadow-[0_18px_50px_rgba(23,53,42,.11)]">
         <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-100 text-[#18b968]">
           <Icon size={29} />
         </span>
@@ -1909,7 +1923,7 @@ function UserAdmin({
         button="Add user"
         click={add}
       />
-      <section className="overflow-hidden rounded-[22px] border bg-white">
+      <section className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_32px_rgba(23,53,42,.08)]">
         <div className="divide-y">
           {rows.map((row) => (
             <div
@@ -2016,7 +2030,7 @@ function PasswordSettings({
         title="Security settings"
         text="Update your password without exposing it to administrators."
       />
-      <section className="max-w-xl rounded-[24px] border bg-white p-6">
+      <section className="max-w-xl rounded-[28px] bg-white p-6 shadow-[0_12px_32px_rgba(23,53,42,.08)]">
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
             <KeyRound />
