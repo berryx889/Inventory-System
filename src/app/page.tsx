@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
-  ArrowLeftRight,
   Boxes,
   Building2,
   Camera,
@@ -14,6 +13,7 @@ import {
   History,
   KeyRound,
   LogOut,
+  Menu,
   Minus,
   PackageCheck,
   Plus,
@@ -21,15 +21,18 @@ import {
   RotateCcw,
   ScanLine,
   Search,
+  ShoppingCart,
   Settings,
   ShieldCheck,
   Users,
+  Trash2,
   X,
 } from "lucide-react";
 
 type View =
+  | "Sell"
+  | "Products"
   | "Dashboard"
-  | "Inventory"
   | "Issue Stock"
   | "Receive Stock"
   | "Returns"
@@ -78,10 +81,6 @@ type Client = {
   status: string;
 };
 type Location = { id: string; name: string; clientId: string };
-const mvpProductNames = new Set([
-  "Tissue", "Soap", "Broom", "Bleach", "Collector",
-  "Dust Bin", "Sweeper", "Mop", "Air Freshener", "T-Roll",
-]);
 type Movement = {
   id: string;
   transactionCode: string;
@@ -123,9 +122,9 @@ type EligibleIssue = {
   }[];
 };
 const nav: [View, typeof Boxes][] = [
+  ["Sell", ShoppingCart],
+  ["Products", PackageCheck],
   ["Dashboard", Boxes],
-  ["Inventory", PackageCheck],
-  ["Issue Stock", ScanLine],
   ["Receive Stock", ArrowDownToLine],
   ["Returns", RotateCcw],
   ["Transactions", History],
@@ -207,7 +206,8 @@ function Modal({
 export default function App() {
   const [auth, setAuth] = useState<"loading" | "out" | "in">("loading"),
     [user, setUser] = useState<User | null>(null),
-    [view, setView] = useState<View>("Inventory"),
+    [view, setView] = useState<View>("Sell"),
+    [navOpen, setNavOpen] = useState(false),
     [toast, setToast] = useState("");
   const [items, setItems] = useState<Item[]>([]),
     [employees, setEmployees] = useState<Employee[]>([]),
@@ -229,7 +229,7 @@ export default function App() {
       | "new-user"
       | null
     >(null),
-    [chosenItem] = useState<Item | null>(null),
+    [chosenItem, setChosenItem] = useState<Item | null>(null),
     [chosenEmployee, setChosenEmployee] = useState<Employee | null>(null),
     [chosenMove, setChosenMove] = useState<Movement | null>(null);
   const tell = (message: string) => {
@@ -278,6 +278,31 @@ export default function App() {
       setLoading(false);
     }
   };
+  const completeIssue = async (data: {
+    employeeId: string;
+    notes?: string;
+    lines: { itemId: string; quantity: number }[];
+  }) => {
+    setLoading(true);
+    try {
+      const result = await request<{ transaction: { transactionCode: string } }>(
+        "/api/stock/issues",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+      await load();
+      tell(`Collection ${result.transaction.transactionCode} completed`);
+      return result.transaction;
+    } catch (error) {
+      tell(error instanceof Error ? error.message : "Unable to issue supplies");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
   if (auth === "loading")
     return (
       <div className="grid min-h-dvh place-items-center bg-[#f7faf8]">
@@ -296,39 +321,38 @@ export default function App() {
     );
   const activeItems = items.filter((i) => i.status === "ACTIVE"),
     activeEmployees = employees.filter((e) => e.status === "ACTIVE");
+  const visibleNav = nav.filter(([label]) =>
+    label !== "Users" || user!.role === "ADMIN",
+  );
+  const chooseView = (next: View) => { setView(next); setNavOpen(false); };
   return (
-    <div className="min-h-dvh bg-[#e9e9ed] text-[#101114]">
-      <header className="patch-header sticky top-0 z-40 border-b border-black/[.06] bg-white text-[#101114] shadow-[0_8px_28px_rgba(0,0,0,.06)]">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <button onClick={() => setView("Inventory")} className="patch-brand flex shrink-0 items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[#4147f5] text-white"><Boxes size={21} /></span>
-            <span className="text-left"><b className="block text-lg leading-none">StockFlow</b><small className="text-slate-400">Warehouse control</small></span>
-          </button>
-          <nav className="order-3 flex w-full gap-1 overflow-x-auto pb-0.5 md:order-none md:ml-3 md:w-auto md:flex-1">
-            {nav.filter(([label]) => label !== "Users" || user!.role === "ADMIN").map(([label, Icon]) => (
-              <button
-                key={label}
-                onClick={() => setView(label)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${view === label ? "bg-[#4147f5] text-white shadow-md" : "text-slate-500 hover:bg-[#f1f1f5] hover:text-black"}`}
-              >
-                <Icon size={16} />{label}
-              </button>
-            ))}
-          </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div className="hidden text-right lg:block"><b className="block text-xs">{user!.name}</b><span className="text-[10px] text-slate-400">{user!.role.replaceAll("_", " ")}</span></div>
-            <span className="grid size-9 place-items-center rounded-full bg-[#4147f5] text-sm font-bold text-white">{user!.name.slice(0, 1).toUpperCase()}</span>
-            <button
-              aria-label="Log out"
-              onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); setAuth("out"); }}
-              className="grid size-9 place-items-center rounded-xl bg-[#f1f1f5] text-slate-600 hover:bg-[#e5e5eb]"
-            ><LogOut size={17} /></button>
-            <span className="hidden items-center gap-1.5 pl-1 xl:flex" aria-hidden="true"><i className="size-2 rounded-full bg-[#4147f5]" /><i className="size-2 rounded-full bg-[#4147f5]" /><i className="size-2 rounded-full bg-[#4147f5]" /></span>
-          </div>
+    <div className="min-h-dvh bg-[#eef0f5] text-[#101114] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      {navOpen && <button aria-label="Close navigation" className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden" onClick={() => setNavOpen(false)} />}
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-black/[.06] bg-white p-4 shadow-2xl transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 lg:shadow-none ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <button onClick={() => chooseView("Sell")} className="patch-brand flex items-center gap-3 px-2 py-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-[#4147f5] text-white"><Boxes size={22} /></span>
+          <span className="text-left"><b className="block text-xl leading-none">StockFlow</b><small className="mt-1 block text-slate-400">Warehouse control</small></span>
+        </button>
+        <nav className="mt-7 flex-1 space-y-1 overflow-y-auto">
+          {visibleNav.map(([label, Icon]) => (
+            <button key={label} onClick={() => chooseView(label)} className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${view === label ? "bg-[#4147f5] text-white shadow-[0_8px_22px_rgba(65,71,245,.22)]" : "text-slate-500 hover:bg-[#f3f4f8] hover:text-slate-950"}`}>
+              <Icon size={19} />{label}
+            </button>
+          ))}
+        </nav>
+        <div className="rounded-2xl bg-[#f5f6fa] p-3">
+          <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-[#4147f5] font-bold text-white">{user!.name.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><b className="block truncate text-sm">{user!.name}</b><span className="text-[10px] text-slate-400">{user!.role.replaceAll("_", " ")}</span></div></div>
+          <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); setAuth("out"); }} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-bold text-slate-600 shadow-sm"><LogOut size={16} /> Log out</button>
         </div>
-      </header>
-      <main className="pb-8">
+      </aside>
+      <div className="min-w-0">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-black/[.06] bg-white/95 px-4 backdrop-blur lg:hidden">
+          <button aria-label="Open navigation" onClick={() => setNavOpen(true)} className="grid size-10 place-items-center rounded-xl bg-[#f2f3f7]"><Menu size={20} /></button>
+          <b className="ml-3 text-lg">{view}</b>
+        </header>
+        <main className="pb-8">
         <div className="mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
+          {view === "Sell" && <Sell items={activeItems} employees={activeEmployees} busy={loading} submit={completeIssue} />}
           {view === "Dashboard" && (
             <Dashboard
               items={items}
@@ -338,22 +362,11 @@ export default function App() {
               action={setModal}
             />
           )}
-          {view === "Inventory" && (
-            <Inventory
+          {view === "Products" && (
+            <Products
               items={items}
               add={() => setModal("new-item")}
-              busy={loading}
-              transfer={(data) =>
-                act(
-                  () =>
-                    request("/api/stock/transfers", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(data),
-                    }),
-                  "Stock transfer completed",
-                )
-              }
+              select={(item) => { setChosenItem(item); setModal("item"); }}
             />
           )}
           {view === "Employees" && (
@@ -444,7 +457,8 @@ export default function App() {
             />
           )}
         </div>
-      </main>
+        </main>
+      </div>
       {modal === "new-item" && (
         <NewItem
           close={() => setModal(null)}
@@ -776,7 +790,7 @@ function Dashboard({
             ["Issue stock", ScanLine, () => action("issue")],
             ["Receive", ArrowDownToLine, () => action("receive")],
             ["Employees", Users, () => go("Employees")],
-            ["Inventory", PackageCheck, () => go("Inventory")],
+            ["Products", PackageCheck, () => go("Products")],
           ].map(([l, I, fn]) => {
             const Icon = I as typeof Boxes;
             return (
@@ -815,186 +829,100 @@ function Dashboard({
     </>
   );
 }
-function Inventory({
-  items,
-  add,
-  busy,
-  transfer,
-}: {
+function Sell({ items, employees, busy, submit }: {
   items: Item[];
-  add: () => void;
+  employees: Employee[];
   busy: boolean;
-  transfer: (data: {
-    itemId: string;
-    quantity: number;
-    from: string;
-    to: string;
-    printReceipt: boolean;
-  }) => Promise<void>;
+  submit: (data: { employeeId: string; notes?: string; lines: { itemId: string; quantity: number }[] }) => Promise<{ transactionCode: string } | null>;
 }) {
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
-  const [from, setFrom] = useState("Storage A");
-  const [to, setTo] = useState("Sales Floor");
-  const [quantity, setQuantity] = useState(1);
+  const [employeeId, setEmployeeId] = useState("");
+  const [cart, setCart] = useState<Record<string, number>>({});
   const [printReceipt, setPrintReceipt] = useState(false);
-  const visibleItems = items.filter((item) => mvpProductNames.has(item.name));
-  const filtered = visibleItems.filter((item) =>
+  const [receipt, setReceipt] = useState<{ code: string; employee: Employee; lines: { item: Item; quantity: number }[] } | null>(null);
+  const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(query.toLowerCase()),
   );
-  const selected = visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0];
+  const employee = employees.find((row) => row.id === employeeId);
+  const lines = Object.entries(cart).flatMap(([id, quantity]) => {
+    const item = items.find((row) => row.id === id);
+    return item ? [{ item, quantity }] : [];
+  });
+  const totalUnits = lines.reduce((sum, line) => sum + line.quantity, 0);
+  const change = (item: Item, amount: number) => setCart((current) => {
+    const nextQuantity = Math.max(0, Math.min(item.currentQuantity, (current[item.id] ?? 0) + amount));
+    const next = { ...current };
+    if (nextQuantity === 0) delete next[item.id]; else next[item.id] = nextQuantity;
+    return next;
+  });
 
   return (
-    <div className="patch-workspace overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(0,0,0,.10)] xl:grid xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,.8fr)]">
+    <div className="patch-workspace overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(21,28,56,.10)] xl:grid xl:min-h-[calc(100dvh-48px)] xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,.78fr)]">
       <section className="bg-[#f7f7fa] p-5 sm:p-7">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Stock workspace</p>
-            <h2 className="text-3xl font-black tracking-[-.04em]">Inventory · Products</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Select a product to transfer stock.
-            </p>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Supply counter</p>
+            <h1 className="text-3xl font-black tracking-[-.04em]">Issue supplies</h1>
+            <p className="mt-1 text-sm text-slate-500">Choose products to build this employee&apos;s collection.</p>
           </div>
-          <button
-            onClick={add}
-            className="hidden items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-2.5 text-sm font-bold text-white sm:flex"
-          >
-            <Plus size={17} /> Add product
-          </button>
+          <div className="hidden rounded-2xl bg-white px-4 py-3 text-right shadow-sm sm:block"><b className="block text-lg">{items.length}</b><span className="text-xs text-slate-400">active products</span></div>
         </div>
-        <div className="my-4 flex flex-wrap gap-2">
-          <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
+        <div className="my-5">
+          <label className="flex items-center gap-2 rounded-2xl bg-white px-4 shadow-sm ring-1 ring-black/[.04]">
             <Search size={17} className="text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search products…"
-              className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none"
-            />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tissue, soap, mop…" className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" />
           </label>
-          <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">
-            {filtered.length} products
-          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item, index) => {
-            const active = selected?.id === item.id;
+            const quantity = cart[item.id] ?? 0;
             return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setSelectedId(item.id);
-                  setQuantity(1);
-                }}
-                className={`inventory-transfer-card relative rounded-[20px] bg-white p-4 text-left shadow-sm ${active ? "ring-2 ring-[#4147f5]" : "ring-1 ring-black/[.05]"}`}
-              >
-                {active && (
-                  <span className="absolute right-3 top-3 grid size-6 place-items-center rounded-full bg-[#4147f5] text-white">
-                    <Check size={15} />
-                  </span>
-                )}
+              <article key={item.id} className={`inventory-transfer-card relative rounded-[22px] bg-white p-4 shadow-sm ring-1 ${quantity ? "ring-[#4147f5]" : "ring-black/[.04]"}`}>
                 <div
                   className="size-16 rounded-2xl bg-[#eef5ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
-                  style={{
-                    backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4],
-                  }}
+                  style={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4] }}
                 />
                 <h3 className="mt-3 text-lg font-black">{item.name}</h3>
-                <p className={`mt-2 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>
-                  In Stock: {item.currentQuantity} {item.unit}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">Unit: {item.unit}</p>
-                <p className="text-xs text-slate-500">
-                  Location: {item.storageLocation || "A-12"}
-                </p>
-              </button>
+                <p className={`mt-1 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.currentQuantity} {item.unit} in stock</p>
+                <p className="mt-1 text-xs text-slate-400">{item.storageLocation || "Warehouse"}</p>
+                <button disabled={item.currentQuantity < 1} onClick={() => change(item, 1)} aria-label={`Add ${item.name}`} className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-[#4147f5] text-white shadow-[0_7px_18px_rgba(65,71,245,.25)] disabled:bg-slate-200 disabled:shadow-none"><Plus size={20} /></button>
+                {quantity > 0 && <span className="absolute bottom-4 right-4 grid size-7 place-items-center rounded-full bg-[#0e1b33] text-xs font-black text-white">{quantity}</span>}
+              </article>
             );
           })}
+          {!filtered.length && <p className="col-span-full rounded-2xl bg-white p-8 text-center text-sm text-slate-500">No products match your search.</p>}
         </div>
       </section>
 
       <aside className="patch-checkout border-t border-slate-200 bg-white p-5 sm:p-7 xl:border-l xl:border-t-0">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#343ae6]">Transaction</p>
-            <h2 className="mt-1 text-2xl font-black">Stock Transfer</h2>
-          </div>
-          <ArrowLeftRight className="text-slate-400" />
+          <div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#343ae6]">Current collection</p><h2 className="mt-1 text-2xl font-black">Supply cart</h2></div>
+          <ShoppingCart className="text-slate-400" />
         </div>
-        <div className="mt-5 space-y-4">
-          <label className="block text-sm font-bold">
-            From (Source Location)
-            <select value={from} onChange={(event) => setFrom(event.target.value)} className={field}>
-              <option>Storage A</option>
-              <option>Storage B</option>
-              <option>Sales Floor</option>
-            </select>
-          </label>
-          <label className="block text-sm font-bold">
-            To (Destination Location)
-            <select value={to} onChange={(event) => setTo(event.target.value)} className={field}>
-              <option>Sales Floor</option>
-              <option>Customer</option>
-              <option>Waste</option>
-            </select>
-          </label>
-        </div>
+        <label className="mt-5 block text-sm font-bold">Collecting employee
+          <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} className={field}><option value="">Select employee…</option>{employees.map((row) => <option value={row.id} key={row.id}>{row.fullName} · {row.employeeCode}</option>)}</select>
+        </label>
+        {employee && <div className="mt-3 rounded-2xl bg-[#eef0ff] p-3 text-sm"><b>{employee.fullName}</b><p className="mt-1 text-xs text-slate-500">{employee.client} · {employee.location}</p></div>}
         <div className="my-5 h-px bg-slate-100" />
-        {selected ? (
-          <>
-            <p className="text-sm font-bold">Selected Product</p>
-            <div className="mt-2 flex items-center gap-3 rounded-2xl bg-[#f1f6ff] p-3">
-              <PackageCheck className="text-[#4147f5]" />
-              <div>
-                <b>{selected.name} · {selected.unit}</b>
-                <p className="text-xs text-slate-500">
-                  {selected.currentQuantity} available
-                </p>
-              </div>
-            </div>
-            <p className="mt-5 text-sm font-bold">Transfer Quantity</p>
-            <div className="mt-2 grid grid-cols-[48px_1fr_48px] items-center rounded-xl bg-[#f4f5f7] p-1">
-              <button aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="grid size-11 place-items-center rounded-lg bg-white shadow-sm">
-                <Minus size={18} />
-              </button>
-              <b className="text-center text-lg">{quantity}</b>
-              <button aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(selected.currentQuantity, value + 1))} className="grid size-11 place-items-center rounded-lg bg-[#4147f5] text-white">
-                <Plus size={18} />
-              </button>
-            </div>
-            <div className="mt-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
-              <b>Transfer: {quantity} × {selected.name}</b>
-              <p className="mt-1">{from} → {to}</p>
-            </div>
-            <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold">
-              <input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#4147f5]" />
-              <Printer size={18} /> Print receipt
-            </label>
-            <div className="mt-4 grid grid-cols-[.65fr_1.35fr] gap-2">
-              <button onClick={() => setQuantity(1)} className="rounded-xl border border-slate-300 py-3 font-bold">Clear</button>
-              <button
-                disabled={busy || selected.currentQuantity < 1 || from === to}
-                onClick={async () => {
-                  await transfer({ itemId: selected.id, quantity, from, to, printReceipt });
-                  if (printReceipt) window.setTimeout(() => window.print(), 150);
-                }}
-                className="rounded-xl bg-[#4147f5] py-3 font-bold text-white disabled:opacity-45"
-              >
-                {busy ? "Transferring…" : "DONE · Transfer Stock"}
-              </button>
-            </div>
-            <section id="stock-transfer-receipt" className="hidden">
-              <h1>StockFlow</h1><p>Stock Transfer Receipt</p><hr />
-              <p><b>{selected.name}</b>: {quantity} {selected.unit}</p>
-              <p>{from} → {to}</p><p>{new Date().toLocaleString()}</p>
-            </section>
-          </>
-        ) : (
-          <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No products are available.</p>
-        )}
+        <div className="space-y-2">
+          {lines.map(({ item, quantity }) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-[#f7f7fa] p-3"><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.name}</b><span className="text-xs text-slate-400">{item.unit}</span></div><button onClick={() => change(item, -1)} className="grid size-8 place-items-center rounded-full bg-white shadow-sm"><Minus size={15} /></button><b className="w-6 text-center">{quantity}</b><button onClick={() => change(item, 1)} className="grid size-8 place-items-center rounded-full bg-[#4147f5] text-white"><Plus size={15} /></button><button aria-label={`Remove ${item.name}`} onClick={() => setCart((current) => { const next = { ...current }; delete next[item.id]; return next; })} className="grid size-8 place-items-center text-slate-400 hover:text-red-600"><Trash2 size={16} /></button></div>)}
+          {!lines.length && <div className="grid min-h-36 place-items-center rounded-2xl bg-[#f7f7fa] p-5 text-center"><div><ShoppingCart className="mx-auto text-slate-300" /><p className="mt-2 text-sm font-bold text-slate-500">Your supply cart is empty</p><p className="mt-1 text-xs text-slate-400">Use + to add a product.</p></div></div>}
+        </div>
+        <div className="mt-5 flex items-center justify-between border-y border-slate-100 py-4"><span className="font-bold">Total supplies</span><b className="text-2xl">{totalUnits} <small className="text-xs text-slate-400">units</small></b></div>
+        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold"><input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#4147f5]" /><Printer size={18} /> Print collection receipt</label>
+        <button disabled={busy || !employee || !lines.length} onClick={async () => { if (!employee) return; const snapshot = lines; const result = await submit({ employeeId: employee.id, lines: snapshot.map((line) => ({ itemId: line.item.id, quantity: line.quantity })) }); if (result) { setReceipt({ code: result.transactionCode, employee, lines: snapshot }); setCart({}); if (printReceipt) window.setTimeout(() => window.print(), 180); } }} className="mt-4 w-full rounded-2xl bg-[#4147f5] py-4 font-black text-white shadow-[0_10px_24px_rgba(65,71,245,.22)] disabled:opacity-40">{busy ? "Completing…" : "ISSUE · Complete collection"}</button>
+        <button disabled={!lines.length} onClick={() => setCart({})} className="mt-2 w-full py-2.5 text-sm font-bold text-slate-400 disabled:opacity-30">Clear cart</button>
+        {receipt && <section id="supply-issue-receipt" className="hidden"><h1>StockFlow</h1><p>Supply Collection Receipt</p><hr /><p><b>{receipt.code}</b></p><p>{receipt.employee.fullName} · {receipt.employee.employeeCode}</p><p>{receipt.employee.client} · {receipt.employee.location}</p><hr />{receipt.lines.map((line) => <p key={line.item.id}>{line.item.name}: {line.quantity} {line.item.unit}</p>)}<hr /><p>{new Date().toLocaleString()}</p></section>}
       </aside>
     </div>
   );
+}
+
+function Products({ items, add, select }: { items: Item[]; add: () => void; select: (item: Item) => void }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "LOW">("ALL");
+  const rows = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) && (filter === "ALL" || (filter === "LOW" ? item.inventoryStatus !== "IN_STOCK" : item.status === filter)));
+  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add, edit, restock or safely deactivate warehouse products.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card flex items-center gap-4 rounded-[22px] bg-[#f8f8fb] p-4 text-left ring-1 ring-black/[.04]"><div className="size-16 shrink-0 rounded-2xl bg-[#eef0ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]" style={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4] }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
 }
 function Employees({
   rows,

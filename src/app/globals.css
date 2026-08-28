@@ -7,11 +7,14 @@
 
 @media print {
   body * { visibility: hidden !important; }
-  #employee-print-card, #employee-print-card *, #stock-transfer-receipt, #stock-transfer-receipt * { visibility: visible !important; }
+  #employee-print-card, #employee-print-card *, #stock-transfer-receipt, #stock-transfer-receipt *, #supply-issue-receipt, #supply-issue-receipt * { visibility: visible !important; }
   #employee-print-card { position: fixed; inset: 0; width: 90mm; height: fit-content; margin: 15mm auto; border: 2px solid #b7ead0 !important; box-shadow: none !important; }
   #stock-transfer-receipt { display: block !important; position: fixed; inset: 0; width: 80mm; margin: 12mm auto; padding: 8mm; color: #111; background: white; }
   #stock-transfer-receipt h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
   #stock-transfer-receipt p { margin: 8px 0; }
+  #supply-issue-receipt { display: block !important; position: fixed; inset: 0; width: 80mm; margin: 12mm auto; padding: 8mm; color: #111; background: white; }
+  #supply-issue-receipt h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  #supply-issue-receipt p { margin: 7px 0; }
   @page { size: A4; margin: 0; }
 }
 
