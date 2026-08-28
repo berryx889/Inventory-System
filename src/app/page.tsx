@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
-  ArrowDownToLine,
   Boxes,
   CalendarCheck,
   Check,
@@ -34,7 +33,6 @@ type View =
   | "End of Day"
   | "Dashboard"
   | "Issue Stock"
-  | "Receive Stock"
   | "Returns"
   | "Transactions"
   | "Locations"
@@ -125,7 +123,6 @@ const nav: [View, typeof Boxes][] = [
   ["Products", PackageCheck],
   ["End of Day", CalendarCheck],
   ["Dashboard", Boxes],
-  ["Receive Stock", ArrowDownToLine],
   ["Returns", RotateCcw],
   ["Transactions", History],
   ["Locations", MapPin],
@@ -149,6 +146,10 @@ function status(item: Item) {
       ? "Low stock"
       : "In stock";
 }
+const productPhotoPosition: Record<string, string> = {
+  Tissue: "0% 0%", Soap: "25% 0%", Broom: "50% 0%", Bleach: "75% 0%", Collector: "100% 0%",
+  "Dust Bin": "0% 100%", Sweeper: "25% 100%", Mop: "50% 100%", "Air Freshener": "75% 100%", "T-Roll": "100% 100%",
+};
 function Badge({ children }: { children: ReactNode }) {
   const value = String(children);
   const css =
@@ -355,7 +356,6 @@ export default function App() {
               locations={locations}
               moves={moves}
               go={setView}
-              action={setModal}
             />
           )}
           {view === "Products" && (
@@ -383,23 +383,8 @@ export default function App() {
               click={() => setModal("issue")}
             />
           )}
-          {view === "Receive Stock" && (
-            <Callout
-              icon={ArrowDownToLine}
-              title="Receive stock"
-              text="Record deliveries from suppliers and update live warehouse balances."
-              button="Create receipt"
-              click={() => setModal("receive")}
-            />
-          )}
           {view === "Returns" && (
-            <Callout
-              icon={RotateCcw}
-              title="Stock returns"
-              text="Return previously issued company supplies to the warehouse."
-              button="Record return"
-              click={() => setModal("return")}
-            />
+            <ReturnWorkspace rows={moves} open={() => setModal("return")} />
           )}
           {view === "Locations" && <Locations rows={locations} add={() => setModal("new-location")} />}
           {view === "Users" && (
@@ -753,13 +738,11 @@ function Dashboard({
   locations,
   moves,
   go,
-  action,
 }: {
   items: Item[];
   locations: Location[];
   moves: Movement[];
   go: (v: View) => void;
-  action: (v: "issue" | "receive") => void;
 }) {
   const total = items.reduce((s, i) => s + i.currentQuantity, 0),
     low = items.filter((i) => i.inventoryStatus !== "IN_STOCK").length;
@@ -774,7 +757,7 @@ function Dashboard({
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ["Dispatch stock", ScanLine, () => go("Sell")],
-            ["Receive", ArrowDownToLine, () => action("receive")],
+            ["Return stock", RotateCcw, () => go("Returns")],
             ["Locations", MapPin, () => go("Locations")],
             ["Products", PackageCheck, () => go("Products")],
           ].map(([l, I, fn]) => {
@@ -864,10 +847,7 @@ function Sell({ items, locations, busy, submit }: {
             const quantity = cart[item.id] ?? 0;
             return (
               <article key={item.id} className={`inventory-transfer-card relative rounded-[22px] bg-white p-4 shadow-sm ring-1 ${quantity ? "ring-[#4147f5]" : "ring-black/[.04]"}`}>
-                <div
-                  className="size-16 rounded-2xl bg-[#eef5ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]"
-                  style={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4] }}
-                />
+                <div className="h-28 w-full rounded-2xl bg-[#f1f1f3] bg-[url('/assets/inventory-products-real-v2.webp')] bg-[length:500%_200%] bg-no-repeat" style={{ backgroundPosition: productPhotoPosition[item.name] ?? `${(index % 5) * 25}% ${index > 4 ? 100 : 0}%` }} />
                 <h3 className="mt-3 text-lg font-black">{item.name}</h3>
                 <p className={`mt-1 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.currentQuantity} {item.unit} in stock</p>
                 <p className="mt-1 text-xs text-slate-400">{item.storageLocation || "Warehouse"}</p>
@@ -908,7 +888,7 @@ function Products({ items, add, select }: { items: Item[]; add: () => void; sele
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "LOW">("ALL");
   const rows = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) && (filter === "ALL" || (filter === "LOW" ? item.inventoryStatus !== "IN_STOCK" : item.status === filter)));
-  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add, edit, restock or safely deactivate warehouse products.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card flex items-center gap-4 rounded-[22px] bg-[#f8f8fb] p-4 text-left ring-1 ring-black/[.04]"><div className="size-16 shrink-0 rounded-2xl bg-[#eef0ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]" style={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4] }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
+  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add products, add stock, edit details or safely deactivate items.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card overflow-hidden rounded-[22px] bg-[#f8f8fb] text-left ring-1 ring-black/[.04]"><div className="h-36 w-full bg-[#f1f1f3] bg-[url('/assets/inventory-products-real-v2.webp')] bg-[length:500%_200%] bg-no-repeat" style={{ backgroundPosition: productPhotoPosition[item.name] ?? `${(index % 5) * 25}% ${index > 4 ? 100 : 0}%` }} /><div className="p-4"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
 }
 // Legacy staff administration is retained for historical employee records but is no longer routed.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -990,6 +970,11 @@ function EndOfDay({ rows }: { rows: Movement[] }) {
   const dispatches = new Set(issued.map((row) => row.transactionCode)).size;
   const units = issued.reduce((sum, row) => sum + row.quantity, 0);
   return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Daily close</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">End of Day</h1><p className="mt-1 text-sm text-slate-500">Everything dispatched from the warehouse on the selected day.</p></div><label className="text-xs font-bold text-slate-500">DATE<input type="date" value={day} onChange={(event) => setDay(event.target.value)} className={field} /></label></div><div className="my-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-[#eef0ff] p-5"><span className="text-xs font-bold text-slate-500">DISPATCHES</span><b className="mt-2 block text-3xl">{dispatches}</b></div><div className="rounded-2xl bg-[#f6f6f9] p-5"><span className="text-xs font-bold text-slate-500">PRODUCT LINES</span><b className="mt-2 block text-3xl">{issued.length}</b></div><div className="rounded-2xl bg-[#f6f6f9] p-5"><span className="text-xs font-bold text-slate-500">TOTAL UNITS</span><b className="mt-2 block text-3xl">{units}</b></div></div><div className="overflow-hidden rounded-2xl ring-1 ring-black/[.05]"><div className="hidden grid-cols-[1fr_1.3fr_1fr_.7fr] bg-[#f5f6fa] px-4 py-3 text-xs font-bold text-slate-400 sm:grid"><span>TRANSACTION</span><span>LOCATION</span><span>PRODUCT</span><span>QUANTITY</span></div>{issued.map((row) => <div key={row.id} className="grid gap-1 border-t border-black/[.05] px-4 py-4 text-sm sm:grid-cols-[1fr_1.3fr_1fr_.7fr]"><b>{row.transactionCode}</b><span>{row.location ?? row.client ?? "—"}</span><span>{row.item}</span><span className="font-bold">{row.quantity} {row.unit}</span></div>)}{!issued.length && <p className="p-10 text-center text-sm text-slate-400">No warehouse dispatches were recorded on this date.</p>}</div></section>;
+}
+
+function ReturnWorkspace({ rows, open }: { rows: Movement[]; open: () => void }) {
+  const recent = rows.filter((row) => row.type === "STOCK_RETURNED").slice(0, 6);
+  return <section className="overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(21,28,56,.08)]"><div className="grid gap-8 bg-[#4147f5] p-7 text-white md:grid-cols-[1fr_auto] md:items-center sm:p-9"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/70">Back into inventory</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Return stock</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">Select the delivery location, choose its original dispatch, then record exactly what came back. Stock is restored only after confirmation.</p></div><button onClick={open} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-black text-[#4147f5] shadow-lg"><RotateCcw size={19} /> Start a return</button></div><div className="p-5 sm:p-7"><div className="grid gap-3 sm:grid-cols-3">{[["1", "Choose location", "Identify where the items are returning from."], ["2", "Select dispatch", "Use the original transaction to protect quantities."], ["3", "Confirm items", "Returned stock is added back with an audit record."]].map(([number, title, text]) => <article key={number} className="rounded-2xl bg-[#f6f6f9] p-4"><span className="grid size-8 place-items-center rounded-full bg-[#eef0ff] text-xs font-black text-[#4147f5]">{number}</span><b className="mt-3 block">{title}</b><p className="mt-1 text-xs leading-5 text-slate-500">{text}</p></article>)}</div><h2 className="mt-7 text-lg font-black">Recent returns</h2><div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-black/[.05]">{recent.map((row) => <div key={row.id} className="grid gap-1 border-t border-black/[.05] px-4 py-3 text-sm sm:grid-cols-[1fr_1fr_1fr_auto]"><b>{row.transactionCode}</b><span>{row.location ?? "—"}</span><span>{row.item}</span><b>{row.quantity} {row.unit}</b></div>)}{!recent.length && <p className="p-8 text-center text-sm text-slate-400">No stock returns have been recorded yet.</p>}</div></div></section>;
 }
 
 function NewLocation({ clients, close, submit }: { clients: Client[]; close: () => void; submit: (data: Record<string, unknown>) => void }) {
@@ -1398,7 +1383,7 @@ function ItemDetails({
                 onClick={receive}
                 className="mt-5 w-full rounded-xl bg-[#4147f5] py-3 font-bold text-white"
               >
-                Receive this item
+                Add stock
               </button>
               <button
                 onClick={edit}
@@ -1543,7 +1528,7 @@ function StockForm({
     ]);
   const title =
     kind === "receive"
-      ? "Receive stock"
+      ? "Add stock"
       : kind === "issue"
         ? "Issue stock"
         : "Record stock return";
