@@ -1,0 +1,2 @@
+ALTER TABLE "StockIssue" ALTER COLUMN "employeeId" DROP NOT NULL;
+ALTER TABLE "StockIssue" ALTER COLUMN "employeeName" DROP NOT NULL;

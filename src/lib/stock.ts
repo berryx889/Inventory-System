@@ -23,18 +23,16 @@ async function stockAlert(tx: Prisma.TransactionClient, itemId: string, name: st
   }
 }
 
-export async function issueStock(input: { employeeId: string; officerId: string; notes?: string; lines: Line[] }) {
+export async function issueStock(input: { locationId: string; officerId: string; notes?: string; lines: Line[] }) {
   const lines = normalizeLines(input.lines);
   return prisma.$transaction(async (tx) => {
-    const employee = await tx.employee.findUnique({ where: { id: input.employeeId }, include: { assignments: { where: { endsAt: null, isPrimary: true }, include: { client: true, location: true }, take: 1 } } });
-    if (!employee) throw new AppError(404, "EMPLOYEE_NOT_FOUND", "Employee was not found.");
-    if (employee.employmentStatus !== "ACTIVE") throw new AppError(422, "EMPLOYEE_INACTIVE", "This employee is currently inactive and cannot collect stock.");
-    const assignment = employee.assignments[0];
-    if (!assignment) throw new AppError(422, "ASSIGNMENT_REQUIRED", "The employee needs an active client and location assignment.");
+    const location = await tx.location.findFirst({ where: { id: input.locationId, status: RecordStatus.ACTIVE }, include: { client: true } });
+    if (!location) throw new AppError(404, "LOCATION_NOT_FOUND", "The selected destination location was not found or is inactive.");
+    if (location.client.status !== RecordStatus.ACTIVE) throw new AppError(422, "LOCATION_INACTIVE", "The organization for this location is inactive.");
     const items = await tx.inventoryItem.findMany({ where: { id: { in: lines.map((l) => l.itemId) } } });
     if (items.length !== lines.length) throw new AppError(404, "ITEM_NOT_FOUND", "One or more inventory items were not found.");
     const code = txCode("ISS");
-    const issue = await tx.stockIssue.create({ data: { transactionCode: code, employeeId: employee.id, clientId: assignment.clientId, locationId: assignment.locationId, employeeName: employee.fullName, clientName: assignment.client.companyName, locationName: assignment.location.name, officerId: input.officerId, notes: input.notes } });
+    const issue = await tx.stockIssue.create({ data: { transactionCode: code, clientId: location.clientId, locationId: location.id, clientName: location.client.companyName, locationName: location.name, officerId: input.officerId, notes: input.notes } });
     for (const line of lines) {
       const item = items.find((candidate) => candidate.id === line.itemId)!;
       if (item.status !== RecordStatus.ACTIVE) throw new AppError(422, "ITEM_INACTIVE", `${item.name} is inactive and cannot be issued.`);
@@ -43,7 +41,7 @@ export async function issueStock(input: { employeeId: string; officerId: string;
       const changed = await tx.inventoryItem.updateMany({ where: { id: item.id, version: item.version, currentQuantity: { gte: line.quantity } }, data: { currentQuantity: next, version: { increment: 1 } } });
       if (changed.count !== 1) throw new AppError(409, "STOCK_CHANGED", `${item.name} stock changed. Review and submit again.`);
       await tx.stockIssueItem.create({ data: { issueId: issue.id, itemId: item.id, itemName: item.name, unit: item.unit, quantity: line.quantity } });
-      await tx.stockMovement.create({ data: { transactionCode: code, movementType: MovementType.STOCK_ISSUED, itemId: item.id, quantity: line.quantity, previousQuantity: item.currentQuantity, newQuantity: next, employeeId: employee.id, clientId: assignment.clientId, locationId: assignment.locationId, officerId: input.officerId, issueId: issue.id, notes: input.notes } });
+      await tx.stockMovement.create({ data: { transactionCode: code, movementType: MovementType.STOCK_ISSUED, itemId: item.id, quantity: line.quantity, previousQuantity: item.currentQuantity, newQuantity: next, clientId: location.clientId, locationId: location.id, officerId: input.officerId, issueId: issue.id, notes: input.notes } });
       await stockAlert(tx, item.id, item.name, next, item.minimumStockLevel);
     }
     await tx.auditLog.create({ data: { userId: input.officerId, action: "STOCK_ISSUED", entityType: "StockIssue", entityId: issue.id, newValue: { transactionCode: code } } });
@@ -135,21 +133,19 @@ export function validateTransferInput(quantity: number, from: string, to: string
     throw new AppError(422, "SAME_LOCATION", "Source and destination must be different.");
 }
 
-export async function returnStock(input:{employeeId:string;officerId:string;originalIssueId?:string;notes?:string;lines:Line[]}){
+export async function returnStock(input:{locationId:string;officerId:string;originalIssueId?:string;notes?:string;lines:Line[]}){
   const lines=normalizeLines(input.lines);
   return prisma.$transaction(async tx=>{
-    const employee=await tx.employee.findUnique({where:{id:input.employeeId},include:{assignments:{where:{endsAt:null,isPrimary:true},take:1}}});
-    if(!employee)throw new AppError(404,"EMPLOYEE_NOT_FOUND","Employee was not found.");
-    const assignment=employee.assignments[0];
-    if(!assignment)throw new AppError(422,"ASSIGNMENT_REQUIRED","The employee needs an active client and location assignment.");
+    const location=await tx.location.findFirst({where:{id:input.locationId,status:RecordStatus.ACTIVE},include:{client:true}});
+    if(!location)throw new AppError(404,"LOCATION_NOT_FOUND","The selected location was not found.");
     const items=await tx.inventoryItem.findMany({where:{id:{in:lines.map(line=>line.itemId)}}});
     if(items.length!==lines.length)throw new AppError(404,"ITEM_NOT_FOUND","One or more inventory items were not found.");
-    const originalIssue=input.originalIssueId?await tx.stockIssue.findFirst({where:{id:input.originalIssueId,employeeId:employee.id},include:{items:true,returns:{include:{items:true}}}}):null;
-    if(input.originalIssueId&&!originalIssue)throw new AppError(404,"ISSUE_NOT_FOUND","The original issue was not found for this employee.");
+    const originalIssue=input.originalIssueId?await tx.stockIssue.findFirst({where:{id:input.originalIssueId,locationId:location.id},include:{items:true,returns:{include:{items:true}}}}):null;
+    if(input.originalIssueId&&!originalIssue)throw new AppError(404,"ISSUE_NOT_FOUND","The original issue was not found for this location.");
     if(originalIssue){for(const line of lines){const issued=originalIssue.items.find(i=>i.itemId===line.itemId);const already=originalIssue.returns.flatMap(r=>r.items).filter(i=>i.itemId===line.itemId).reduce((sum,i)=>sum.plus(i.quantity),new Prisma.Decimal(0));if(!issued||issued.quantity.minus(already).lt(line.quantity))throw new AppError(422,"RETURN_EXCEEDS_ISSUE","Returned quantity cannot exceed the quantity still eligible for return.");}}
     const code=txCode("RET");
-    const returned=await tx.stockReturn.create({data:{transactionCode:code,originalIssueId:input.originalIssueId,employeeId:employee.id,clientId:assignment.clientId,locationId:assignment.locationId,officerId:input.officerId,notes:input.notes}});
-    for(const line of lines){const item=items.find(candidate=>candidate.id===line.itemId)!;const next=item.currentQuantity.plus(line.quantity);const issueItem=originalIssue?.items.find(candidate=>candidate.itemId===line.itemId);await tx.inventoryItem.update({where:{id:item.id},data:{currentQuantity:next,version:{increment:1}}});await tx.stockReturnItem.create({data:{returnId:returned.id,issueItemId:issueItem?.id,itemId:item.id,itemName:item.name,unit:item.unit,quantity:line.quantity}});await tx.stockMovement.create({data:{transactionCode:code,movementType:MovementType.STOCK_RETURNED,itemId:item.id,quantity:line.quantity,previousQuantity:item.currentQuantity,newQuantity:next,employeeId:employee.id,clientId:assignment.clientId,locationId:assignment.locationId,officerId:input.officerId,returnId:returned.id,notes:input.notes}});await stockAlert(tx,item.id,item.name,next,item.minimumStockLevel)}
+    const returned=await tx.stockReturn.create({data:{transactionCode:code,originalIssueId:input.originalIssueId,clientId:location.clientId,locationId:location.id,officerId:input.officerId,notes:input.notes}});
+    for(const line of lines){const item=items.find(candidate=>candidate.id===line.itemId)!;const next=item.currentQuantity.plus(line.quantity);const issueItem=originalIssue?.items.find(candidate=>candidate.itemId===line.itemId);await tx.inventoryItem.update({where:{id:item.id},data:{currentQuantity:next,version:{increment:1}}});await tx.stockReturnItem.create({data:{returnId:returned.id,issueItemId:issueItem?.id,itemId:item.id,itemName:item.name,unit:item.unit,quantity:line.quantity}});await tx.stockMovement.create({data:{transactionCode:code,movementType:MovementType.STOCK_RETURNED,itemId:item.id,quantity:line.quantity,previousQuantity:item.currentQuantity,newQuantity:next,clientId:location.clientId,locationId:location.id,officerId:input.officerId,returnId:returned.id,notes:input.notes}});await stockAlert(tx,item.id,item.name,next,item.minimumStockLevel)}
     await tx.auditLog.create({data:{userId:input.officerId,action:"STOCK_RETURNED",entityType:"StockReturn",entityId:returned.id,newValue:{transactionCode:code}}});
     return tx.stockReturn.findUniqueOrThrow({where:{id:returned.id},include:{items:true}});
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});

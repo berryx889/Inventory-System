@@ -1,0 +1,1 @@
+ALTER TABLE "StockReturn" ALTER COLUMN "employeeId" DROP NOT NULL;

@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { requireSession } from "@/lib/session";
 import { issueStock } from "@/lib/stock";
 
-const schema = z.object({ employeeId: z.string().min(1), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.string().min(1), quantity: z.number().positive() })).min(1) });
+const schema = z.object({ locationId: z.string().min(1), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.string().min(1), quantity: z.number().positive() })).min(1) });
 export async function POST(request: Request) {
   try {
     const user = await requireSession(); requirePermission(user.role, "stock:issue");

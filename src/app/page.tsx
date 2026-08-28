@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
   Boxes,
-  Building2,
-  Camera,
+  CalendarCheck,
   Check,
   FileDown,
   Eye,
@@ -13,6 +12,7 @@ import {
   History,
   KeyRound,
   LogOut,
+  MapPin,
   Menu,
   Minus,
   PackageCheck,
@@ -24,7 +24,6 @@ import {
   ShoppingCart,
   Settings,
   ShieldCheck,
-  Users,
   Trash2,
   X,
 } from "lucide-react";
@@ -32,13 +31,13 @@ import {
 type View =
   | "Sell"
   | "Products"
+  | "End of Day"
   | "Dashboard"
   | "Issue Stock"
   | "Receive Stock"
   | "Returns"
   | "Transactions"
-  | "Employees"
-  | "Clients"
+  | "Locations"
   | "Users"
   | "Settings";
 type User = { id: string; name: string; email: string; role: string };
@@ -80,7 +79,7 @@ type Client = {
   employees: number;
   status: string;
 };
-type Location = { id: string; name: string; clientId: string };
+type Location = { id: string; locationCode: string; name: string; clientId: string; address?: string | null; client?: { companyName: string } };
 type Movement = {
   id: string;
   transactionCode: string;
@@ -124,12 +123,12 @@ type EligibleIssue = {
 const nav: [View, typeof Boxes][] = [
   ["Sell", ShoppingCart],
   ["Products", PackageCheck],
+  ["End of Day", CalendarCheck],
   ["Dashboard", Boxes],
   ["Receive Stock", ArrowDownToLine],
   ["Returns", RotateCcw],
   ["Transactions", History],
-  ["Employees", Users],
-  ["Clients", Building2],
+  ["Locations", MapPin],
   ["Users", ShieldCheck],
   ["Settings", Settings],
 ];
@@ -210,7 +209,6 @@ export default function App() {
     [navOpen, setNavOpen] = useState(false),
     [toast, setToast] = useState("");
   const [items, setItems] = useState<Item[]>([]),
-    [employees, setEmployees] = useState<Employee[]>([]),
     [clients, setClients] = useState<Client[]>([]),
     [locations, setLocations] = useState<Location[]>([]),
     [moves, setMoves] = useState<Movement[]>([]),
@@ -227,28 +225,26 @@ export default function App() {
       | "return"
       | "movement"
       | "new-user"
+      | "new-location"
       | null
     >(null),
     [chosenItem, setChosenItem] = useState<Item | null>(null),
-    [chosenEmployee, setChosenEmployee] = useState<Employee | null>(null),
     [chosenMove, setChosenMove] = useState<Movement | null>(null);
   const tell = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(""), 2800);
   };
   const load = useCallback(async () => {
-    const [a, b, c, d, e] = await Promise.all([
+    const [a, b, c, d] = await Promise.all([
       request<{ items: Item[] }>("/api/inventory"),
-      request<{ employees: Employee[] }>("/api/employees"),
       request<{ clients: Client[] }>("/api/clients"),
       request<{ locations: Location[] }>("/api/locations"),
       request<{ transactions: Movement[] }>("/api/transactions"),
     ]);
     setItems(a.items);
-    setEmployees(b.employees);
-    setClients(c.clients);
-    setLocations(d.locations);
-    setMoves(e.transactions);
+    setClients(b.clients);
+    setLocations(c.locations);
+    setMoves(d.transactions);
   }, []);
   useEffect(() => {
     request<{ user: User }>("/api/auth/me")
@@ -279,7 +275,7 @@ export default function App() {
     }
   };
   const completeIssue = async (data: {
-    employeeId: string;
+    locationId: string;
     notes?: string;
     lines: { itemId: string; quantity: number }[];
   }) => {
@@ -319,8 +315,7 @@ export default function App() {
         }}
       />
     );
-  const activeItems = items.filter((i) => i.status === "ACTIVE"),
-    activeEmployees = employees.filter((e) => e.status === "ACTIVE");
+  const activeItems = items.filter((i) => i.status === "ACTIVE");
   const visibleNav = nav.filter(([label]) =>
     label !== "Users" || user!.role === "ADMIN",
   );
@@ -352,11 +347,12 @@ export default function App() {
         </header>
         <main className="pb-8">
         <div className="mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
-          {view === "Sell" && <Sell items={activeItems} employees={activeEmployees} busy={loading} submit={completeIssue} />}
+          {view === "Sell" && <Sell items={activeItems} locations={locations} busy={loading} submit={completeIssue} />}
+          {view === "End of Day" && <EndOfDay rows={moves} />}
           {view === "Dashboard" && (
             <Dashboard
               items={items}
-              employees={employees}
+              locations={locations}
               moves={moves}
               go={setView}
               action={setModal}
@@ -367,16 +363,6 @@ export default function App() {
               items={items}
               add={() => setModal("new-item")}
               select={(item) => { setChosenItem(item); setModal("item"); }}
-            />
-          )}
-          {view === "Employees" && (
-            <Employees
-              rows={employees}
-              select={(x) => {
-                setChosenEmployee(x);
-                setModal("employee");
-              }}
-              add={() => setModal("new-employee")}
             />
           )}
           {view === "Transactions" && (
@@ -415,7 +401,7 @@ export default function App() {
               click={() => setModal("return")}
             />
           )}
-          {view === "Clients" && <Clients rows={clients} />}
+          {view === "Locations" && <Locations rows={locations} add={() => setModal("new-location")} />}
           {view === "Users" && (
             <UserAdmin
               current={user!}
@@ -533,14 +519,11 @@ export default function App() {
           }
         />
       )}
-      {modal === "employee" && chosenEmployee && (
-        <EmployeeCard employee={chosenEmployee} close={() => setModal(null)} />
-      )}
       {modal === "receive" && (
         <StockForm
           kind="receive"
           items={activeItems}
-          employees={activeEmployees}
+          locations={locations}
           initialItem={chosenItem?.id}
           busy={loading}
           close={() => setModal(null)}
@@ -561,7 +544,7 @@ export default function App() {
         <StockForm
           kind="issue"
           items={activeItems.filter((item) => item.currentQuantity > 0)}
-          employees={activeEmployees}
+          locations={locations}
           busy={loading}
           close={() => setModal(null)}
           submit={(data) =>
@@ -581,7 +564,7 @@ export default function App() {
         <StockForm
           kind="return"
           items={activeItems}
-          employees={activeEmployees}
+          locations={locations}
           busy={loading}
           close={() => setModal(null)}
           submit={(data) =>
@@ -621,6 +604,9 @@ export default function App() {
             )
           }
         />
+      )}
+      {modal === "new-location" && (
+        <NewLocation clients={clients.filter((client) => client.status === "ACTIVE")} close={() => setModal(null)} submit={(data) => act(() => request("/api/locations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }), "Location added")} />
       )}
       {toast && (
         <div className="fixed bottom-22 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-[#0e1b33] px-4 py-3 text-sm font-bold text-white shadow-xl lg:bottom-6">
@@ -764,13 +750,13 @@ function Head({
 }
 function Dashboard({
   items,
-  employees,
+  locations,
   moves,
   go,
   action,
 }: {
   items: Item[];
-  employees: Employee[];
+  locations: Location[];
   moves: Movement[];
   go: (v: View) => void;
   action: (v: "issue" | "receive") => void;
@@ -784,12 +770,12 @@ function Dashboard({
         <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-[1.06] tracking-[-.035em] text-white sm:text-5xl">
           Everything your teams need, ready when they arrive.
         </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">Live inventory, staff collections, and warehouse activity in one clear view.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">Live inventory, location dispatches, and warehouse activity in one clear view.</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            ["Issue stock", ScanLine, () => action("issue")],
+            ["Dispatch stock", ScanLine, () => go("Sell")],
             ["Receive", ArrowDownToLine, () => action("receive")],
-            ["Employees", Users, () => go("Employees")],
+            ["Locations", MapPin, () => go("Locations")],
             ["Products", PackageCheck, () => go("Products")],
           ].map(([l, I, fn]) => {
             const Icon = I as typeof Boxes;
@@ -812,8 +798,8 @@ function Dashboard({
           ["Units in stock", total],
           ["Needs attention", low],
           [
-            "Active staff",
-            employees.filter((e) => e.status === "ACTIVE").length,
+            "Delivery locations",
+            locations.length,
           ],
         ].map(([a, b]) => (
           <article key={a} className="metric-card spring-card rounded-[22px] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
@@ -829,21 +815,21 @@ function Dashboard({
     </>
   );
 }
-function Sell({ items, employees, busy, submit }: {
+function Sell({ items, locations, busy, submit }: {
   items: Item[];
-  employees: Employee[];
+  locations: Location[];
   busy: boolean;
-  submit: (data: { employeeId: string; notes?: string; lines: { itemId: string; quantity: number }[] }) => Promise<{ transactionCode: string } | null>;
+  submit: (data: { locationId: string; notes?: string; lines: { itemId: string; quantity: number }[] }) => Promise<{ transactionCode: string } | null>;
 }) {
   const [query, setQuery] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
+  const [locationId, setLocationId] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [printReceipt, setPrintReceipt] = useState(false);
-  const [receipt, setReceipt] = useState<{ code: string; employee: Employee; lines: { item: Item; quantity: number }[] } | null>(null);
+  const [receipt, setReceipt] = useState<{ code: string; location: Location; lines: { item: Item; quantity: number }[] } | null>(null);
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(query.toLowerCase()),
   );
-  const employee = employees.find((row) => row.id === employeeId);
+  const location = locations.find((row) => row.id === locationId);
   const lines = Object.entries(cart).flatMap(([id, quantity]) => {
     const item = items.find((row) => row.id === id);
     return item ? [{ item, quantity }] : [];
@@ -863,7 +849,7 @@ function Sell({ items, employees, busy, submit }: {
           <div>
             <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Supply counter</p>
             <h1 className="text-3xl font-black tracking-[-.04em]">Issue supplies</h1>
-            <p className="mt-1 text-sm text-slate-500">Choose products to build this employee&apos;s collection.</p>
+            <p className="mt-1 text-sm text-slate-500">Choose products requested by the destination location.</p>
           </div>
           <div className="hidden rounded-2xl bg-white px-4 py-3 text-right shadow-sm sm:block"><b className="block text-lg">{items.length}</b><span className="text-xs text-slate-400">active products</span></div>
         </div>
@@ -899,10 +885,10 @@ function Sell({ items, employees, busy, submit }: {
           <div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#343ae6]">Current collection</p><h2 className="mt-1 text-2xl font-black">Supply cart</h2></div>
           <ShoppingCart className="text-slate-400" />
         </div>
-        <label className="mt-5 block text-sm font-bold">Collecting employee
-          <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} className={field}><option value="">Select employee…</option>{employees.map((row) => <option value={row.id} key={row.id}>{row.fullName} · {row.employeeCode}</option>)}</select>
+        <label className="mt-5 block text-sm font-bold">Delivery location
+          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} className={field}><option value="">Select destination…</option>{locations.map((row) => <option value={row.id} key={row.id}>{row.name}{row.client?.companyName && row.client.companyName !== row.name ? ` · ${row.client.companyName}` : ""}</option>)}</select>
         </label>
-        {employee && <div className="mt-3 rounded-2xl bg-[#eef0ff] p-3 text-sm"><b>{employee.fullName}</b><p className="mt-1 text-xs text-slate-500">{employee.client} · {employee.location}</p></div>}
+        {location && <div className="mt-3 rounded-2xl bg-[#eef0ff] p-3 text-sm"><b>{location.name}</b><p className="mt-1 text-xs text-slate-500">{location.client?.companyName ?? "Company location"}{location.address ? ` · ${location.address}` : ""}</p></div>}
         <div className="my-5 h-px bg-slate-100" />
         <div className="space-y-2">
           {lines.map(({ item, quantity }) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-[#f7f7fa] p-3"><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.name}</b><span className="text-xs text-slate-400">{item.unit}</span></div><button onClick={() => change(item, -1)} className="grid size-8 place-items-center rounded-full bg-white shadow-sm"><Minus size={15} /></button><b className="w-6 text-center">{quantity}</b><button onClick={() => change(item, 1)} className="grid size-8 place-items-center rounded-full bg-[#4147f5] text-white"><Plus size={15} /></button><button aria-label={`Remove ${item.name}`} onClick={() => setCart((current) => { const next = { ...current }; delete next[item.id]; return next; })} className="grid size-8 place-items-center text-slate-400 hover:text-red-600"><Trash2 size={16} /></button></div>)}
@@ -910,9 +896,9 @@ function Sell({ items, employees, busy, submit }: {
         </div>
         <div className="mt-5 flex items-center justify-between border-y border-slate-100 py-4"><span className="font-bold">Total supplies</span><b className="text-2xl">{totalUnits} <small className="text-xs text-slate-400">units</small></b></div>
         <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold"><input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#4147f5]" /><Printer size={18} /> Print collection receipt</label>
-        <button disabled={busy || !employee || !lines.length} onClick={async () => { if (!employee) return; const snapshot = lines; const result = await submit({ employeeId: employee.id, lines: snapshot.map((line) => ({ itemId: line.item.id, quantity: line.quantity })) }); if (result) { setReceipt({ code: result.transactionCode, employee, lines: snapshot }); setCart({}); if (printReceipt) window.setTimeout(() => window.print(), 180); } }} className="mt-4 w-full rounded-2xl bg-[#4147f5] py-4 font-black text-white shadow-[0_10px_24px_rgba(65,71,245,.22)] disabled:opacity-40">{busy ? "Completing…" : "ISSUE · Complete collection"}</button>
+        <button disabled={busy || !location || !lines.length} onClick={async () => { if (!location) return; const snapshot = lines; const result = await submit({ locationId: location.id, lines: snapshot.map((line) => ({ itemId: line.item.id, quantity: line.quantity })) }); if (result) { setReceipt({ code: result.transactionCode, location, lines: snapshot }); setCart({}); if (printReceipt) window.setTimeout(() => window.print(), 180); } }} className="mt-4 w-full rounded-2xl bg-[#4147f5] py-4 font-black text-white shadow-[0_10px_24px_rgba(65,71,245,.22)] disabled:opacity-40">{busy ? "Completing…" : "DISPATCH · Complete issue"}</button>
         <button disabled={!lines.length} onClick={() => setCart({})} className="mt-2 w-full py-2.5 text-sm font-bold text-slate-400 disabled:opacity-30">Clear cart</button>
-        {receipt && <section id="supply-issue-receipt" className="hidden"><h1>StockFlow</h1><p>Supply Collection Receipt</p><hr /><p><b>{receipt.code}</b></p><p>{receipt.employee.fullName} · {receipt.employee.employeeCode}</p><p>{receipt.employee.client} · {receipt.employee.location}</p><hr />{receipt.lines.map((line) => <p key={line.item.id}>{line.item.name}: {line.quantity} {line.item.unit}</p>)}<hr /><p>{new Date().toLocaleString()}</p></section>}
+        {receipt && <section id="supply-issue-receipt" className="hidden"><h1>StockFlow</h1><p>Warehouse Dispatch Receipt</p><hr /><p><b>{receipt.code}</b></p><p><b>Destination:</b> {receipt.location.name}</p><p>{receipt.location.client?.companyName}{receipt.location.address ? ` · ${receipt.location.address}` : ""}</p><hr />{receipt.lines.map((line) => <p key={line.item.id}>{line.item.name}: {line.quantity} {line.item.unit}</p>)}<hr /><p>{new Date().toLocaleString()}</p></section>}
       </aside>
     </div>
   );
@@ -924,6 +910,8 @@ function Products({ items, add, select }: { items: Item[]; add: () => void; sele
   const rows = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) && (filter === "ALL" || (filter === "LOW" ? item.inventoryStatus !== "IN_STOCK" : item.status === filter)));
   return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add, edit, restock or safely deactivate warehouse products.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card flex items-center gap-4 rounded-[22px] bg-[#f8f8fb] p-4 text-left ring-1 ring-black/[.04]"><div className="size-16 shrink-0 rounded-2xl bg-[#eef0ff] bg-[url('/assets/inventory-products.png')] bg-[length:200%_200%]" style={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 100%", "100% 100%"][index % 4] }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
 }
+// Legacy staff administration is retained for historical employee records but is no longer routed.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Employees({
   rows,
   select,
@@ -976,25 +964,36 @@ function Employees({
     </>
   );
 }
-function Clients({ rows }: { rows: Client[] }) {
+function Locations({ rows, add }: { rows: Location[]; add: () => void }) {
   return (
     <>
-      <Head title="Clients" text="Organizations receiving cleaning services." />
+      <Head title="Locations" text="Destinations that receive warehouse supplies." button="Add location" click={add} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {rows.map((c) => (
-          <article key={c.id} className="spring-card rounded-[22px] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
-            <span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-              <Building2 />
+        {rows.map((location) => (
+          <article key={location.id} className="spring-card rounded-[22px] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,.04)]">
+            <span className="grid size-11 place-items-center rounded-xl bg-[#eef0ff] text-[#4147f5]">
+              <MapPin />
             </span>
-            <h3 className="mt-4 font-black">{c.companyName}</h3>
-            <p className="text-sm text-slate-500">
-              {c.clientCode} · {c.locations} locations · {c.employees} staff
-            </p>
+            <h3 className="mt-4 font-black">{location.name}</h3>
+            <p className="mt-1 text-sm text-slate-500">{location.client?.companyName ?? "Company location"}</p>
+            <p className="mt-3 text-xs text-slate-400">{location.locationCode}{location.address ? ` · ${location.address}` : ""}</p>
           </article>
         ))}
       </div>
     </>
   );
+}
+
+function EndOfDay({ rows }: { rows: Movement[] }) {
+  const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
+  const issued = rows.filter((row) => row.type === "STOCK_ISSUED" && new Date(row.createdAt).toLocaleDateString("en-CA") === day);
+  const dispatches = new Set(issued.map((row) => row.transactionCode)).size;
+  const units = issued.reduce((sum, row) => sum + row.quantity, 0);
+  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Daily close</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">End of Day</h1><p className="mt-1 text-sm text-slate-500">Everything dispatched from the warehouse on the selected day.</p></div><label className="text-xs font-bold text-slate-500">DATE<input type="date" value={day} onChange={(event) => setDay(event.target.value)} className={field} /></label></div><div className="my-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-[#eef0ff] p-5"><span className="text-xs font-bold text-slate-500">DISPATCHES</span><b className="mt-2 block text-3xl">{dispatches}</b></div><div className="rounded-2xl bg-[#f6f6f9] p-5"><span className="text-xs font-bold text-slate-500">PRODUCT LINES</span><b className="mt-2 block text-3xl">{issued.length}</b></div><div className="rounded-2xl bg-[#f6f6f9] p-5"><span className="text-xs font-bold text-slate-500">TOTAL UNITS</span><b className="mt-2 block text-3xl">{units}</b></div></div><div className="overflow-hidden rounded-2xl ring-1 ring-black/[.05]"><div className="hidden grid-cols-[1fr_1.3fr_1fr_.7fr] bg-[#f5f6fa] px-4 py-3 text-xs font-bold text-slate-400 sm:grid"><span>TRANSACTION</span><span>LOCATION</span><span>PRODUCT</span><span>QUANTITY</span></div>{issued.map((row) => <div key={row.id} className="grid gap-1 border-t border-black/[.05] px-4 py-4 text-sm sm:grid-cols-[1fr_1.3fr_1fr_.7fr]"><b>{row.transactionCode}</b><span>{row.location ?? row.client ?? "—"}</span><span>{row.item}</span><span className="font-bold">{row.quantity} {row.unit}</span></div>)}{!issued.length && <p className="p-10 text-center text-sm text-slate-400">No warehouse dispatches were recorded on this date.</p>}</div></section>;
+}
+
+function NewLocation({ clients, close, submit }: { clients: Client[]; close: () => void; submit: (data: Record<string, unknown>) => void }) {
+  return <Modal title="Add delivery location" close={close}><form onSubmit={(event) => { event.preventDefault(); submit(Object.fromEntries(new FormData(event.currentTarget).entries())); }}><label className="text-sm font-bold">Location name<input name="name" required placeholder="Wesley Towers" className={field} /></label><label className="mt-4 block text-sm font-bold">Location code<input name="locationCode" required placeholder="WESLEY-TWR" className={field} /></label><label className="mt-4 block text-sm font-bold">Organization<select name="clientId" required className={field}><option value="">Select organization…</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.companyName}</option>)}</select></label><label className="mt-4 block text-sm font-bold">Address<input name="address" placeholder="Optional delivery address" className={field} /></label><button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">Add location</button></form></Modal>;
 }
 function Transactions({
   rows,
@@ -1439,6 +1438,7 @@ function ItemDetails({
     </Modal>
   );
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function EmployeeCard({
   employee,
   close,
@@ -1493,7 +1493,7 @@ function EmployeeCard({
 function StockForm({
   kind,
   items,
-  employees,
+  locations,
   initialItem,
   busy,
   close,
@@ -1501,24 +1501,23 @@ function StockForm({
 }: {
   kind: "receive" | "issue" | "return";
   items: Item[];
-  employees: Employee[];
+  locations: Location[];
   initialItem?: string;
   busy: boolean;
   close: () => void;
   submit: (x: Record<string, unknown>) => void;
 }) {
-  const [employeeId, setEmployeeId] = useState(employees[0]?.id ?? ""),
+  const [locationId, setLocationId] = useState(locations[0]?.id ?? ""),
     [lines, setLines] = useState([
       { itemId: initialItem ?? items[0]?.id ?? "", quantity: 1 },
     ]),
     [issues, setIssues] = useState<EligibleIssue[]>([]),
-    [issueId, setIssueId] = useState(""),
-    [scanner, setScanner] = useState(false);
+    [issueId, setIssueId] = useState("");
   const selectedIssue = issues.find((i) => i.id === issueId);
   useEffect(() => {
-    if (kind !== "return" || !employeeId) return;
+    if (kind !== "return" || !locationId) return;
     request<{ issues: EligibleIssue[] }>(
-      `/api/stock/issues/eligible?employeeId=${employeeId}`,
+      `/api/stock/issues/eligible?locationId=${locationId}`,
     )
       .then((x) => {
         setIssues(x.issues);
@@ -1530,7 +1529,7 @@ function StockForm({
         );
       })
       .catch(() => setIssues([]));
-  }, [kind, employeeId]);
+  }, [kind, locationId]);
   const add = () =>
     setLines((x) => [
       ...x,
@@ -1564,7 +1563,7 @@ function StockForm({
                   lines,
                 }
               : {
-                  employeeId,
+                  locationId,
                   originalIssueId: kind === "return" ? issueId : undefined,
                   notes: f.get("notes"),
                   lines,
@@ -1585,30 +1584,20 @@ function StockForm({
           <>
             <div className="flex items-end gap-2">
               <label className="flex-1 text-sm font-bold">
-                Employee
+                Location
                 <select
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
                   required
                   className={field}
                 >
-                  {employees.map((e) => (
-                    <option value={e.id} key={e.id}>
-                      {e.employeeCode} — {e.fullName} · {e.location}
+                  {locations.map((location) => (
+                    <option value={location.id} key={location.id}>
+                      {location.name} · {location.client?.companyName ?? "Company"}
                     </option>
                   ))}
                 </select>
               </label>
-              {kind === "issue" && (
-                <button
-                  type="button"
-                  onClick={() => setScanner(true)}
-                  className="mb-0 flex h-[46px] items-center gap-2 rounded-xl bg-[#0e1b33] px-4 text-sm font-bold text-white"
-                >
-                  <Camera size={17} />
-                  Scan QR
-                </button>
-              )}
             </div>
             {kind === "return" && (
               <>
@@ -1637,7 +1626,7 @@ function StockForm({
                 </select>
                 {!issues.length && (
                   <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                    This employee has no issued items eligible for return.
+                    This location has no issued items eligible for return.
                   </p>
                 )}
               </>
@@ -1722,26 +1711,11 @@ function StockForm({
           {busy ? "Saving transaction…" : title}
         </button>
       </form>
-      {scanner && (
-        <CameraScanner
-          close={() => setScanner(false)}
-          found={(code) => {
-            const match = employees.find(
-              (e) =>
-                e.qrToken === code ||
-                e.employeeCode.toLowerCase() === code.toLowerCase(),
-            );
-            if (match) {
-              setEmployeeId(match.id);
-              setScanner(false);
-            }
-          }}
-        />
-      )}
     </Modal>
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CameraScanner({
   close,
   found,

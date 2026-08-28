@@ -183,13 +183,13 @@ model InventoryItem {
 model StockIssue {
   id              String            @id @default(cuid())
   transactionCode String            @unique
-  employeeId      String
-  employee        Employee          @relation(fields: [employeeId], references: [id])
+  employeeId      String?
+  employee        Employee?         @relation(fields: [employeeId], references: [id])
   clientId        String
   client          Client            @relation(fields: [clientId], references: [id])
   locationId      String
   location        Location          @relation(fields: [locationId], references: [id])
-  employeeName    String
+  employeeName    String?
   clientName      String
   locationName    String
   officerId       String
@@ -259,8 +259,8 @@ model StockReturn {
   transactionCode String            @unique
   originalIssueId String?
   originalIssue   StockIssue?       @relation(fields: [originalIssueId], references: [id])
-  employeeId      String
-  employee        Employee          @relation(fields: [employeeId], references: [id])
+  employeeId      String?
+  employee        Employee?         @relation(fields: [employeeId], references: [id])
   clientId        String
   client          Client            @relation(fields: [clientId], references: [id])
   locationId      String

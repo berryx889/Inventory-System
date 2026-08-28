@@ -4,5 +4,5 @@ import { requirePermission } from "@/lib/rbac";
 import { requireSession } from "@/lib/session";
 import { returnStock } from "@/lib/stock";
 
-const schema=z.object({employeeId:z.string().min(1),originalIssueId:z.string().optional(),notes:z.string().max(1000).optional(),lines:z.array(z.object({itemId:z.string().min(1),quantity:z.number().positive()})).min(1)});
+const schema=z.object({locationId:z.string().min(1),originalIssueId:z.string().optional(),notes:z.string().max(1000).optional(),lines:z.array(z.object({itemId:z.string().min(1),quantity:z.number().positive()})).min(1)});
 export async function POST(request:Request){try{const user=await requireSession();requirePermission(user.role,"stock:return");const result=await returnStock({...schema.parse(await request.json()),officerId:user.id});return Response.json({transaction:result},{status:201})}catch(error){return apiError(error)}}
