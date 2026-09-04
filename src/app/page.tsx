@@ -77,7 +77,7 @@ type Client = {
   employees: number;
   status: string;
 };
-type Location = { id: string; locationCode: string; name: string; clientId: string; address?: string | null; client?: { companyName: string } };
+type Location = { id: string; locationCode: string; name: string; clientId: string; address?: string | null };
 type Movement = {
   id: string;
   transactionCode: string;
@@ -599,7 +599,7 @@ export default function App() {
         />
       )}
       {modal === "new-location" && (
-        <NewLocation clients={clients.filter((client) => client.status === "ACTIVE")} close={() => setModal(null)} submit={(data) => act(() => request("/api/locations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }), "Location added")} />
+        <NewLocation close={() => setModal(null)} submit={(data) => act(() => request("/api/locations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }), "Location added")} />
       )}
       {toast && (
         <div className="fixed bottom-22 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-[#0e1b33] px-4 py-3 text-sm font-bold text-white shadow-xl lg:bottom-6">
@@ -874,9 +874,9 @@ function Dispatch({ items, locations, busy, submit }: {
           <ShoppingCart className="text-slate-400" />
         </div>
         <label className="mt-5 block text-sm font-bold">Delivery location
-          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} className={field}><option value="">Select destination…</option>{locations.map((row) => <option value={row.id} key={row.id}>{row.name}{row.client?.companyName && row.client.companyName !== row.name ? ` · ${row.client.companyName}` : ""}</option>)}</select>
+          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} className={field}><option value="">Select destination…</option>{locations.map((row) => <option value={row.id} key={row.id}>{row.name}</option>)}</select>
         </label>
-        {location && <div className="mt-3 rounded-2xl bg-[#eef0ff] p-3 text-sm"><b>{location.name}</b><p className="mt-1 text-xs text-slate-500">{location.client?.companyName ?? "Company location"}{location.address ? ` · ${location.address}` : ""}</p></div>}
+        {location && <div className="mt-3 rounded-2xl bg-[#eef0ff] p-3 text-sm"><b>{location.name}</b>{location.address && <p className="mt-1 text-xs text-slate-500">{location.address}</p>}</div>}
         <div className="my-5 h-px bg-slate-100" />
         <div className="space-y-2">
           {lines.map(({ item, quantity }) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-[#f7f7fa] p-3"><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.name}</b><span className="text-xs text-slate-400">{item.unit}</span></div><button onClick={() => change(item, -1)} className="grid size-8 place-items-center rounded-full bg-white shadow-sm"><Minus size={15} /></button><b className="w-6 text-center">{quantity}</b><button onClick={() => change(item, 1)} className="grid size-8 place-items-center rounded-full bg-[#4147f5] text-white"><Plus size={15} /></button><button aria-label={`Remove ${item.name}`} onClick={() => setCart((current) => { const next = { ...current }; delete next[item.id]; return next; })} className="grid size-8 place-items-center text-slate-400 hover:text-red-600"><Trash2 size={16} /></button></div>)}
@@ -886,7 +886,7 @@ function Dispatch({ items, locations, busy, submit }: {
         <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl bg-[#f7f7f8] p-3 text-sm font-semibold"><input type="checkbox" checked={printReceipt} onChange={(event) => setPrintReceipt(event.target.checked)} className="size-5 accent-[#4147f5]" /><Printer size={18} /> Print collection receipt</label>
         <button disabled={busy || !location || !lines.length} onClick={async () => { if (!location) return; const snapshot = lines; const result = await submit({ locationId: location.id, lines: snapshot.map((line) => ({ itemId: line.item.id, quantity: line.quantity })) }); if (result) { setReceipt({ code: result.transactionCode, location, lines: snapshot }); setCart({}); if (printReceipt) window.setTimeout(() => window.print(), 180); } }} className="mt-4 w-full rounded-2xl bg-[#4147f5] py-4 font-black text-white shadow-[0_10px_24px_rgba(65,71,245,.22)] disabled:opacity-40">{busy ? "Completing…" : "DISPATCH · Complete issue"}</button>
         <button disabled={!lines.length} onClick={() => setCart({})} className="mt-2 w-full py-2.5 text-sm font-bold text-slate-400 disabled:opacity-30">Clear cart</button>
-        {receipt && <section id="supply-issue-receipt" className="hidden"><h1>StockFlow</h1><p>Warehouse Dispatch Receipt</p><hr /><p><b>{receipt.code}</b></p><p><b>Destination:</b> {receipt.location.name}</p><p>{receipt.location.client?.companyName}{receipt.location.address ? ` · ${receipt.location.address}` : ""}</p><hr />{receipt.lines.map((line) => <p key={line.item.id}>{line.item.name}: {line.quantity} {line.item.unit}</p>)}<hr /><p>{new Date().toLocaleString()}</p></section>}
+        {receipt && <section id="supply-issue-receipt" className="hidden"><h1>StockFlow</h1><p>Warehouse Dispatch Receipt</p><hr /><p><b>{receipt.code}</b></p><p><b>Destination:</b> {receipt.location.name}</p>{receipt.location.address && <p>{receipt.location.address}</p>}<hr />{receipt.lines.map((line) => <p key={line.item.id}>{line.item.name}: {line.quantity} {line.item.unit}</p>)}<hr /><p>{new Date().toLocaleString()}</p></section>}
       </aside>
     </div>
   );
@@ -963,8 +963,8 @@ function Locations({ rows, add }: { rows: Location[]; add: () => void }) {
               <MapPin />
             </span>
             <h3 className="mt-4 font-black">{location.name}</h3>
-            <p className="mt-1 text-sm text-slate-500">{location.client?.companyName ?? "Company location"}</p>
-            <p className="mt-3 text-xs text-slate-400">{location.locationCode}{location.address ? ` · ${location.address}` : ""}</p>
+            <p className="mt-1 text-sm text-slate-500">{location.address || "Delivery location"}</p>
+            <p className="mt-3 text-xs text-slate-400">{location.locationCode}</p>
           </article>
         ))}
       </div>
@@ -985,8 +985,8 @@ function ReturnWorkspace({ rows, open }: { rows: Movement[]; open: () => void })
   return <section className="overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(21,28,56,.08)]"><div className="grid gap-8 bg-[#4147f5] p-7 text-white md:grid-cols-[1fr_auto] md:items-center sm:p-9"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/70">Back into inventory</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Return stock</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">Select the delivery location, choose its original dispatch, then record exactly what came back. Stock is restored only after confirmation.</p></div><button onClick={open} className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 font-black text-[#4147f5] shadow-lg"><RotateCcw size={19} /> Start a return</button></div><div className="p-5 sm:p-7"><div className="grid gap-3 sm:grid-cols-3">{[["1", "Choose location", "Identify where the items are returning from."], ["2", "Select dispatch", "Use the original transaction to protect quantities."], ["3", "Confirm items", "Returned stock is added back with an audit record."]].map(([number, title, text]) => <article key={number} className="rounded-2xl bg-[#f6f6f9] p-4"><span className="grid size-8 place-items-center rounded-full bg-[#eef0ff] text-xs font-black text-[#4147f5]">{number}</span><b className="mt-3 block">{title}</b><p className="mt-1 text-xs leading-5 text-slate-500">{text}</p></article>)}</div><h2 className="mt-7 text-lg font-black">Recent returns</h2><div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-black/[.05]">{recent.map((row) => <div key={row.id} className="grid gap-1 border-t border-black/[.05] px-4 py-3 text-sm sm:grid-cols-[1fr_1fr_1fr_auto]"><b>{row.transactionCode}</b><span>{row.location ?? "—"}</span><span>{row.item}</span><b>{row.quantity} {row.unit}</b></div>)}{!recent.length && <p className="p-8 text-center text-sm text-slate-400">No stock returns have been recorded yet.</p>}</div></div></section>;
 }
 
-function NewLocation({ clients, close, submit }: { clients: Client[]; close: () => void; submit: (data: Record<string, unknown>) => void }) {
-  return <Modal title="Add delivery location" close={close}><form onSubmit={(event) => { event.preventDefault(); submit(Object.fromEntries(new FormData(event.currentTarget).entries())); }}><label className="text-sm font-bold">Location name<input name="name" required placeholder="Wesley Towers" className={field} /></label><label className="mt-4 block text-sm font-bold">Location code<input name="locationCode" required placeholder="WESLEY-TWR" className={field} /></label><label className="mt-4 block text-sm font-bold">Organization<select name="clientId" required className={field}><option value="">Select organization…</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.companyName}</option>)}</select></label><label className="mt-4 block text-sm font-bold">Address<input name="address" placeholder="Optional delivery address" className={field} /></label><button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">Add location</button></form></Modal>;
+function NewLocation({ close, submit }: { close: () => void; submit: (data: Record<string, unknown>) => void }) {
+  return <Modal title="Add delivery location" close={close}><form onSubmit={(event) => { event.preventDefault(); submit(Object.fromEntries(new FormData(event.currentTarget).entries())); }}><label className="text-sm font-bold">Location name<input name="name" required placeholder="Wesley Towers" className={field} /></label><label className="mt-4 block text-sm font-bold">Location code<input name="locationCode" required placeholder="WESLEY-TWR" className={field} /></label><label className="mt-4 block text-sm font-bold">Address<input name="address" placeholder="Optional delivery address" className={field} /></label><button className="mt-6 w-full rounded-xl bg-[#4147f5] py-3.5 font-bold text-white">Add location</button></form></Modal>;
 }
 function Transactions({
   rows,
@@ -1586,7 +1586,7 @@ function StockForm({
                 >
                   {locations.map((location) => (
                     <option value={location.id} key={location.id}>
-                      {location.name} · {location.client?.companyName ?? "Company"}
+                      {location.name}
                     </option>
                   ))}
                 </select>
@@ -1834,10 +1834,7 @@ function MovementDetails({
           ["Quantity", `${move.quantity} ${move.unit}`],
           ["Balance", `${move.previousQuantity} → ${move.newQuantity}`],
           ["Employee", move.employee ?? "—"],
-          [
-            "Client / location",
-            [move.client, move.location].filter(Boolean).join(" · ") || "—",
-          ],
+          ["Location", move.location ?? "—"],
           ["Officer", move.officer],
           ["Date", new Date(move.createdAt).toLocaleString()],
         ].map(([a, b]) => (

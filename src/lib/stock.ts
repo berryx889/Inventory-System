@@ -28,7 +28,7 @@ export async function issueStock(input: { locationId: string; officerId: string;
   return prisma.$transaction(async (tx) => {
     const location = await tx.location.findFirst({ where: { id: input.locationId, status: RecordStatus.ACTIVE }, include: { client: true } });
     if (!location) throw new AppError(404, "LOCATION_NOT_FOUND", "The selected destination location was not found or is inactive.");
-    if (location.client.status !== RecordStatus.ACTIVE) throw new AppError(422, "LOCATION_INACTIVE", "The organization for this location is inactive.");
+    if (location.client.status !== RecordStatus.ACTIVE) throw new AppError(422, "LOCATION_INACTIVE", "This location is inactive.");
     const items = await tx.inventoryItem.findMany({ where: { id: { in: lines.map((l) => l.itemId) } } });
     if (items.length !== lines.length) throw new AppError(404, "ITEM_NOT_FOUND", "One or more inventory items were not found.");
     const code = txCode("ISS");
