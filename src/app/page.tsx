@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 type View =
-  | "Sell"
+  | "Dispatch"
   | "Products"
   | "End of Day"
   | "Dashboard"
@@ -119,7 +119,7 @@ type EligibleIssue = {
   }[];
 };
 const nav: [View, typeof Boxes][] = [
-  ["Sell", ShoppingCart],
+  ["Dispatch", ShoppingCart],
   ["Products", PackageCheck],
   ["End of Day", CalendarCheck],
   ["Dashboard", Boxes],
@@ -146,9 +146,17 @@ function status(item: Item) {
       ? "Low stock"
       : "In stock";
 }
-const productPhotoPosition: Record<string, string> = {
-  Tissue: "0% 0%", Soap: "25% 0%", Broom: "50% 0%", Bleach: "75% 0%", Collector: "100% 0%",
-  "Dust Bin": "0% 100%", Sweeper: "25% 100%", Mop: "50% 100%", "Air Freshener": "75% 100%", "T-Roll": "100% 100%",
+const productPhoto: Record<string, string> = {
+  Tissue: "/assets/products/tissue.webp",
+  Soap: "/assets/products/soap.webp",
+  Broom: "/assets/products/broom.webp",
+  Bleach: "/assets/products/bleach.webp",
+  Collector: "/assets/products/collector.webp",
+  "Dust Bin": "/assets/products/dust-bin.webp",
+  Sweeper: "/assets/products/sweeper.webp",
+  Mop: "/assets/products/mop.webp",
+  "Air Freshener": "/assets/products/air-freshener.webp",
+  "T-Roll": "/assets/products/t-roll.webp",
 };
 function Badge({ children }: { children: ReactNode }) {
   const value = String(children);
@@ -206,7 +214,7 @@ function Modal({
 export default function App() {
   const [auth, setAuth] = useState<"loading" | "out" | "in">("loading"),
     [user, setUser] = useState<User | null>(null),
-    [view, setView] = useState<View>("Sell"),
+    [view, setView] = useState<View>("Dispatch"),
     [navOpen, setNavOpen] = useState(false),
     [toast, setToast] = useState("");
   const [items, setItems] = useState<Item[]>([]),
@@ -325,7 +333,7 @@ export default function App() {
     <div className="min-h-dvh bg-[#eef0f5] text-[#101114] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
       {navOpen && <button aria-label="Close navigation" className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden" onClick={() => setNavOpen(false)} />}
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-black/[.06] bg-white p-4 shadow-2xl transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 lg:shadow-none ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <button onClick={() => chooseView("Sell")} className="patch-brand flex items-center gap-3 px-2 py-3">
+        <button onClick={() => chooseView("Dispatch")} className="patch-brand flex items-center gap-3 px-2 py-3">
           <span className="grid size-11 place-items-center rounded-2xl bg-[#4147f5] text-white"><Boxes size={22} /></span>
           <span className="text-left"><b className="block text-xl leading-none">StockFlow</b><small className="mt-1 block text-slate-400">Warehouse control</small></span>
         </button>
@@ -348,7 +356,7 @@ export default function App() {
         </header>
         <main className="pb-8">
         <div className="mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
-          {view === "Sell" && <Sell items={activeItems} locations={locations} busy={loading} submit={completeIssue} />}
+          {view === "Dispatch" && <Dispatch items={activeItems} locations={locations} busy={loading} submit={completeIssue} />}
           {view === "End of Day" && <EndOfDay rows={moves} />}
           {view === "Dashboard" && (
             <Dashboard
@@ -756,7 +764,7 @@ function Dashboard({
         <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">Live inventory, location dispatches, and warehouse activity in one clear view.</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            ["Dispatch stock", ScanLine, () => go("Sell")],
+            ["Dispatch stock", ScanLine, () => go("Dispatch")],
             ["Return stock", RotateCcw, () => go("Returns")],
             ["Locations", MapPin, () => go("Locations")],
             ["Products", PackageCheck, () => go("Products")],
@@ -798,7 +806,7 @@ function Dashboard({
     </>
   );
 }
-function Sell({ items, locations, busy, submit }: {
+function Dispatch({ items, locations, busy, submit }: {
   items: Item[];
   locations: Location[];
   busy: boolean;
@@ -843,11 +851,11 @@ function Sell({ items, locations, busy, submit }: {
           </label>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item, index) => {
+          {filtered.map((item) => {
             const quantity = cart[item.id] ?? 0;
             return (
               <article key={item.id} className={`inventory-transfer-card relative rounded-[22px] bg-white p-4 shadow-sm ring-1 ${quantity ? "ring-[#4147f5]" : "ring-black/[.04]"}`}>
-                <div className="h-28 w-full rounded-2xl bg-[#f1f1f3] bg-[url('/assets/inventory-products-real-v2.webp')] bg-[length:500%_200%] bg-no-repeat" style={{ backgroundPosition: productPhotoPosition[item.name] ?? `${(index % 5) * 25}% ${index > 4 ? 100 : 0}%` }} />
+                <div className="h-28 w-full rounded-2xl bg-[#f1f1f3] bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('${productPhoto[item.name] ?? "/assets/products/tissue.webp"}')` }} />
                 <h3 className="mt-3 text-lg font-black">{item.name}</h3>
                 <p className={`mt-1 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.currentQuantity} {item.unit} in stock</p>
                 <p className="mt-1 text-xs text-slate-400">{item.storageLocation || "Warehouse"}</p>
@@ -888,7 +896,7 @@ function Products({ items, add, select }: { items: Item[]; add: () => void; sele
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "LOW">("ALL");
   const rows = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) && (filter === "ALL" || (filter === "LOW" ? item.inventoryStatus !== "IN_STOCK" : item.status === filter)));
-  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add products, add stock, edit details or safely deactivate items.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card overflow-hidden rounded-[22px] bg-[#f8f8fb] text-left ring-1 ring-black/[.04]"><div className="h-36 w-full bg-[#f1f1f3] bg-[url('/assets/inventory-products-real-v2.webp')] bg-[length:500%_200%] bg-no-repeat" style={{ backgroundPosition: productPhotoPosition[item.name] ?? `${(index % 5) * 25}% ${index > 4 ? 100 : 0}%` }} /><div className="p-4"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
+  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add products, add stock, edit details or safely deactivate items.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card overflow-hidden rounded-[22px] bg-[#f8f8fb] text-left ring-1 ring-black/[.04]"><div className="h-36 w-full bg-[#f1f1f3] bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('${productPhoto[item.name] ?? "/assets/products/tissue.webp"}')` }} /><div className="p-4"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
 }
 // Legacy staff administration is retained for historical employee records but is no longer routed.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
