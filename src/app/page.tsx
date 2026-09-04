@@ -190,11 +190,11 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 sm:items-center sm:p-5"
+      className="motion-modal-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 sm:items-center sm:p-5"
       onMouseDown={(e) => e.target === e.currentTarget && close()}
     >
       <section
-        className={`max-h-[92dvh] w-full overflow-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:rounded-[28px] sm:p-6 ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}`}
+        className={`motion-modal-surface max-h-[92dvh] w-full overflow-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:rounded-[28px] sm:p-6 ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}`}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-extrabold">{title}</h2>
@@ -355,7 +355,7 @@ export default function App() {
           <b className="ml-3 text-lg">{view}</b>
         </header>
         <main className="pb-8">
-        <div className="mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
+        <div key={view} className="motion-view-enter mx-auto max-w-[1600px] p-3 sm:p-5 lg:p-6">
           {view === "Dispatch" && <Dispatch items={activeItems} locations={locations} busy={loading} submit={completeIssue} />}
           {view === "End of Day" && <EndOfDay rows={moves} />}
           {view === "Dashboard" && (
@@ -851,10 +851,10 @@ function Dispatch({ items, locations, busy, submit }: {
           </label>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item) => {
+          {filtered.map((item, index) => {
             const quantity = cart[item.id] ?? 0;
             return (
-              <article key={item.id} className={`inventory-transfer-card relative rounded-[22px] bg-white p-4 shadow-sm ring-1 ${quantity ? "ring-[#4147f5]" : "ring-black/[.04]"}`}>
+              <article key={item.id} style={{ animationDelay: `${Math.min(index, 7) * 70}ms` }} className={`motion-card-enter inventory-transfer-card relative rounded-[22px] bg-white p-4 shadow-sm ring-1 ${quantity ? "ring-[#4147f5]" : "ring-black/[.04]"}`}>
                 <div className="h-28 w-full rounded-2xl bg-[#f1f1f3] bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('${productPhoto[item.name] ?? "/assets/products/tissue.webp"}')` }} />
                 <h3 className="mt-3 text-lg font-black">{item.name}</h3>
                 <p className={`mt-1 text-sm font-bold ${item.currentQuantity < 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.currentQuantity} {item.unit} in stock</p>
@@ -896,7 +896,7 @@ function Products({ items, add, select }: { items: Item[]; add: () => void; sele
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "LOW">("ALL");
   const rows = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) && (filter === "ALL" || (filter === "LOW" ? item.inventoryStatus !== "IN_STOCK" : item.status === filter)));
-  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add products, add stock, edit details or safely deactivate items.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item) => <button key={item.id} onClick={() => select(item)} className="inventory-transfer-card overflow-hidden rounded-[22px] bg-[#f8f8fb] text-left ring-1 ring-black/[.04]"><div className="h-36 w-full bg-[#f1f1f3] bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('${productPhoto[item.name] ?? "/assets/products/tissue.webp"}')` }} /><div className="p-4"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
+  return <section className="rounded-[28px] bg-white p-5 shadow-[0_18px_55px_rgba(21,28,56,.08)] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#4147f5]">Catalogue & stock</p><h1 className="mt-1 text-3xl font-black tracking-[-.04em]">Products</h1><p className="mt-1 text-sm text-slate-500">Add products, add stock, edit details or safely deactivate items.</p></div><button onClick={add} className="flex items-center gap-2 rounded-xl bg-[#4147f5] px-4 py-3 text-sm font-bold text-white"><Plus size={17} /> Add product</button></div><div className="my-5 flex flex-wrap gap-2"><label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-[#f5f6fa] px-4"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search products or SKU…" /></label>{(["ALL", "ACTIVE", "INACTIVE", "LOW"] as const).map((value) => <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === value ? "bg-[#0e1b33] text-white" : "bg-[#f5f6fa] text-slate-500"}`}>{value === "LOW" ? "Needs attention" : value.toLowerCase()}</button>)}</div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{rows.map((item, index) => <button key={item.id} style={{ animationDelay: `${Math.min(index, 7) * 70}ms` }} onClick={() => select(item)} className="motion-card-enter inventory-transfer-card overflow-hidden rounded-[22px] bg-[#f8f8fb] text-left ring-1 ring-black/[.04]"><div className="h-36 w-full bg-[#f1f1f3] bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('${productPhoto[item.name] ?? "/assets/products/tissue.webp"}')` }} /><div className="p-4"><div className="flex items-start justify-between gap-2"><b className="truncate text-lg">{item.name}</b><Badge>{item.status === "ACTIVE" ? status(item) : "Inactive"}</Badge></div><p className="mt-2 font-black">{item.currentQuantity} <small className="font-semibold text-slate-400">{item.unit}</small></p><p className="mt-1 text-xs text-slate-400">{item.sku} · {item.storageLocation || "Warehouse"}</p></div></button>)}</div>{!rows.length && <p className="py-14 text-center text-sm text-slate-400">No products found.</p>}</section>;
 }
 // Legacy staff administration is retained for historical employee records but is no longer routed.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
